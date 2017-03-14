@@ -1,5 +1,15 @@
 package netfilter
 
+import (
+	"github.com/mdlayher/netlink/nlenc"
+	"unsafe"
+	"errors"
+)
+
+var (
+	errShortMessage = errors.New("cannot parse netfilter message because it is too short")
+)
+
 // Netfilter Subsystem ID definitions
 // Taken from Linux/include/uapi/linux/netfilter/nfnetlink.h
 //go:generate stringer -type=SubsystemID
@@ -25,3 +35,43 @@ const (
 // Its meaning can only be determined after decoding the Netfilter Subsystem type
 // Possible values and string representations need to be implemented in a subsystem-specific package
 type MessageType uint8
+
+// Size of a Netfilter header (4 Bytes)
+const nfHeaderLen = int(unsafe.Sizeof(Header{}))
+
+// The Netfilter Header type
+// Known in the Linux kernel sources as 'nfgenmsg' at Linux/include/uapi/linux/netfilter/nfnetlink.h
+// Holds the family, version and resource ID of the Netfilter message
+// ------------------------------
+// | Family (1B) | Version (1B) |
+// ------------------------------
+// |     ResourceID (2 Bytes)   |
+// ------------------------------
+type Header struct {
+	Family uint8
+	Version uint8
+	ResourceId uint16
+}
+
+func (h *Header) UnmarshalBinary(b []byte) error {
+	if len(b) < nfHeaderLen {
+		return errShortMessage
+	}
+
+	h.Family = b[0]
+	h.Version = b[1]
+	h.ResourceId = nlenc.Uint16(b[2:4])
+
+	return nil
+}
+
+// The Netfilter Attribute
+// Each Netfilter payload contains a (potentially nested) list of attributes
+// ----------------------------------------
+// | Length (2B) | Type (2B) | Data ...   |
+// ----------------------------------------
+// The Length member is the length of the attribute including header (4 bytes)
+// The Type member encodes:
+// - the nested bit in the leftmost position (1 << 15) - NLA_F_NESTED
+// - the Network Byte Order bit to the right of the leftmost position (1 << 14) - NLA_F_NET_BYTEORDER
+// Both flags are mutually exclusive. See Linux/include/uapi/linux/netlink.h
