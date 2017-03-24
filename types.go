@@ -53,6 +53,18 @@ type Header struct {
 	ResourceId uint16
 }
 
+// MarshalBinary marshals a Header into a byte slice.
+func (h *Header) MarshalBinary() ([]byte, error) {
+	b := make([]byte, 4)
+
+	b[0] = h.Family
+	b[1] = h.Version
+	nlenc.PutUint16(b[2:4], h.ResourceId)
+
+	return b, nil
+}
+
+// UnmarshalBinary unmarshals the contents of a byte slice into a Header.
 func (h *Header) UnmarshalBinary(b []byte) error {
 	if len(b) < nfHeaderLen {
 		return errShortMessage
@@ -64,14 +76,3 @@ func (h *Header) UnmarshalBinary(b []byte) error {
 
 	return nil
 }
-
-// The Netfilter Attribute
-// Each Netfilter payload contains a (potentially nested) list of attributes
-// ----------------------------------------
-// | Length (2B) | Type (2B) | Data ...   |
-// ----------------------------------------
-// The Length member is the length of the attribute including header (4 bytes)
-// The Type member encodes:
-// - the nested bit in the leftmost position (1 << 15) - NLA_F_NESTED
-// - the Network Byte Order bit to the right of the leftmost position (1 << 14) - NLA_F_NET_BYTEORDER
-// Both flags are mutually exclusive. See Linux/include/uapi/linux/netlink.h
