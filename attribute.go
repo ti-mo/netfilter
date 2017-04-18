@@ -5,59 +5,45 @@ import (
 	"fmt"
 )
 
-// The Netlink header type is subtyped here because Netfilter splits this field in two:
-// SubsystemID and Message Type
-type HeaderType struct {
-	MessageType MessageType
-	SubsystemID SubsystemID
-}
-
 // An Attribute is a netlink.Attribute that can be nested.
 type Attribute struct {
 	netlink.Attribute
 	Children []Attribute
 }
 
-// UnmarshalNetlink unmarshals a netlink.HeaderType into a netfilter.HeaderType
-func (ht *HeaderType) UnmarshalNetlink(nlht netlink.HeaderType) error {
-	ht.SubsystemID = SubsystemID(uint16(nlht) & 0xff00 >> 8)
-	ht.MessageType = MessageType(uint16(nlht) & 0x00ff)
-
-	return nil
+func (a Attribute) String() string {
+	if a.Nested {
+		return fmt.Sprintf("<Length %v, Type %v, Nested %v, %d Children (%v)>", a.Length, a.Type, a.Nested, len(a.Children), a.Children)
+	} else {
+		return fmt.Sprintf("<Length %v, Type %v, Nested %v, NetByteOrder %v, %v>", a.Length, a.Type, a.Nested, a.NetByteOrder, a.Data)
+	}
 }
 
-// MarshalNetlink marshals a netfilter.HeaderType into a netlink.HeaderType
-func (ht HeaderType) MarshalNetlink(nlht *netlink.HeaderType) error {
-	*nlht = netlink.HeaderType(uint16(ht.SubsystemID) << 8 | uint16(ht.MessageType))
+// UnmarshalMessage unmarshals the correct offset of a netlink.Message into a
+// list of netfilter.Attributes.
+func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
+	// If there is no valid header present, initialize it
+	if len(msg.Data) < nfHeaderLen {
+		msg.Data = make([]byte, nfHeaderLen)
+	}
 
-	return nil
+	return UnmarshalAttributes(msg.Data[nfHeaderLen:])
 }
 
-// Parse the SubsystemID and Message Type to give correct
-// string representation of the Header Type in Netfilter context
-func (ht HeaderType) String() string {
-	return fmt.Sprintf("%s|%d", ht.SubsystemID, ht.MessageType)
-}
-
-// UnmarshalMessage unmarshals a netlink.Message into a netfilter.Header
-func (h *Header) UnmarshalMessage(msg netlink.Message) error {
-
-	err := h.UnmarshalBinary(msg.Data[:nfHeaderLen])
+// MarshalNessage marshals a list of netfilter.Attributes into a netlink.Message
+// at the correct offset. Discards existing data past nfHeaderLen.
+func MarshalMessage(msg *netlink.Message, attrs []Attribute) error {
+	ba, err := MarshalAttributes(attrs)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// MarshalMessage marshals a nefilter.Header into a netlink.Message's Data attribute
-func (h Header) MarshalMessage(msg *netlink.Message) error {
-	hb, err := h.MarshalBinary()
-	if err != nil {
-		return err
+	// If there is no valid header present, initialize it
+	if len(msg.Data) < nfHeaderLen {
+		msg.Data = make([]byte, nfHeaderLen)
 	}
 
-	copy(msg.Data[:nfHeaderLen], hb)
+	msg.Data = append(msg.Data[:nfHeaderLen], ba...)
 
 	return nil
 }
