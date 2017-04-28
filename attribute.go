@@ -1,8 +1,9 @@
 package netfilter
 
 import (
-	"github.com/mdlayher/netlink"
+	"encoding/binary"
 	"fmt"
+	"github.com/mdlayher/netlink"
 )
 
 // An Attribute is a netlink.Attribute that can be nested.
@@ -17,6 +18,60 @@ func (a Attribute) String() string {
 	} else {
 		return fmt.Sprintf("<Length %v, Type %v, Nested %v, NetByteOrder %v, %v>", a.Length, a.Type, a.Nested, a.NetByteOrder, a.Data)
 	}
+}
+
+func (a Attribute) Uint16() uint16 {
+
+	if a.Nested {
+		panic("Uint16: unexpected Nested attribute")
+	}
+
+	if l := len(a.Data); l != 2 {
+		panic(fmt.Sprintf("Uint16: unexpected byte slice length: %d", l))
+	}
+
+	return binary.BigEndian.Uint16(a.Data)
+}
+
+func (a Attribute) Int16() int16 {
+
+	return int16(a.Uint16())
+}
+
+func (a Attribute) Uint32() uint32 {
+
+	if a.Nested {
+		panic("Uint32: unexpected Nested attribute")
+	}
+
+	if l := len(a.Data); l != 4 {
+		panic(fmt.Sprintf("Uint32: unexpected byte slice length: %d", l))
+	}
+
+	return binary.BigEndian.Uint32(a.Data)
+}
+
+func (a Attribute) Int32() int32 {
+
+	return int32(a.Uint32())
+}
+
+func (a Attribute) Uint64() uint64 {
+
+	if a.Nested {
+		panic("Uint64: unexpected Nested attribute")
+	}
+
+	if l := len(a.Data); l != 8 {
+		panic(fmt.Sprintf("Uint64: unexpected byte slice length: %d", l))
+	}
+
+	return binary.BigEndian.Uint64(a.Data)
+}
+
+func (a Attribute) Int64() int64 {
+
+	return int64(a.Uint64())
 }
 
 // UnmarshalMessage unmarshals the correct offset of a netlink.Message into a
@@ -65,7 +120,8 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 
 		if nla.Nested {
 			// Recursive Unmarshal
-			nfattrs, err := UnmarshalAttributes(nla.Data); if err != nil {
+			nfattrs, err := UnmarshalAttributes(nla.Data)
+			if err != nil {
 				return nil, err
 			}
 
