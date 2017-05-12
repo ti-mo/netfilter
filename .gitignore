@@ -3,3 +3,4 @@
 
 # Generated output
 *_string.go
+*.coverprofile
