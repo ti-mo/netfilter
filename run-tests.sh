@@ -17,4 +17,4 @@ echo "I: Running tests"
 overalls -project github.com/ti-mo/netfilter \
     -covermode atomic -concurrency 4 -debug \
     -- \
-    -race -v
+    -race -v -tags test
