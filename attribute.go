@@ -34,6 +34,7 @@ func (a Attribute) String() string {
 
 }
 
+// Uint16 interprets a non-nested Netfilter attribute in network byte order as a uint16.
 func (a Attribute) Uint16() uint16 {
 
 	if a.Nested {
@@ -47,11 +48,12 @@ func (a Attribute) Uint16() uint16 {
 	return binary.BigEndian.Uint16(a.Data)
 }
 
+// Int16 converts the result of Uint16() to an int16.
 func (a Attribute) Int16() int16 {
-
 	return int16(a.Uint16())
 }
 
+// Uint32 interprets a non-nested Netfilter attribute in network byte order as a uint32.
 func (a Attribute) Uint32() uint32 {
 
 	if a.Nested {
@@ -65,11 +67,12 @@ func (a Attribute) Uint32() uint32 {
 	return binary.BigEndian.Uint32(a.Data)
 }
 
+// Int32 converts the result of Uint16() to an int32.
 func (a Attribute) Int32() int32 {
-
 	return int32(a.Uint32())
 }
 
+// Uint64 interprets a non-nested Netfilter attribute in network byte order as a uint64.
 func (a Attribute) Uint64() uint64 {
 
 	if a.Nested {
@@ -83,15 +86,17 @@ func (a Attribute) Uint64() uint64 {
 	return binary.BigEndian.Uint64(a.Data)
 }
 
+// Int64 converts the result of Uint16() to an int64.
 func (a Attribute) Int64() int64 {
-
 	return int64(a.Uint64())
 }
 
 // UnmarshalMessage unmarshals the correct offset of a netlink.Message into a
 // list of netfilter.Attributes.
 func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
-	// If there is no valid header present, initialize it
+
+	// TODO: Is this correct? Function should just return nothing if there's
+	// less than a header's worth of data.
 	if len(msg.Data) < nfHeaderLen {
 		msg.Data = make([]byte, nfHeaderLen)
 	}
@@ -99,9 +104,10 @@ func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
 	return UnmarshalAttributes(msg.Data[nfHeaderLen:])
 }
 
-// MarshalNessage marshals a list of netfilter.Attributes into a netlink.Message
+// MarshalMessage marshals a list of netfilter.Attributes into a netlink.Message
 // at the correct offset. Discards existing data past nfHeaderLen.
 func MarshalMessage(msg *netlink.Message, attrs []Attribute) error {
+
 	ba, err := MarshalAttributes(attrs)
 	if err != nil {
 		return err

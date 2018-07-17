@@ -1,15 +1,16 @@
 package netfilter
 
 import (
-	"testing"
-	"github.com/mdlayher/netlink"
 	"reflect"
+	"testing"
+
+	"github.com/mdlayher/netlink"
 )
 
 func TestHeaderType_MarshalUnmarshalNetlink(t *testing.T) {
 	nlht := netlink.HeaderType(0x087B) // 0000 1000 0111 1011
 	nfht := HeaderType{
-		SubsystemID: SubsystemID(NFNL_SUBSYS_CTNETLINK_TIMEOUT),
+		SubsystemID: SubsystemID(NFNLSubsysCTNetlinkTimeout),
 		MessageType: MessageType(123),
 	}
 
