@@ -1,16 +1,17 @@
 package netfilter
 
 import (
-	"testing"
-	"github.com/mdlayher/netlink"
 	"reflect"
+	"testing"
+
+	"github.com/mdlayher/netlink"
 )
 
 func TestHeader_MarshalUnmarshalMessage(t *testing.T) {
 	hdr := Header{
-		Family: 255,
-		Version: 1,
-		ResourceId: 2,
+		Family:     255,
+		Version:    1,
+		ResourceID: 2,
 	}
 
 	msg := netlink.Message{Data: []byte{255, 1, 2, 0}}
@@ -51,7 +52,6 @@ func TestAttribute_MarshalUnmarshalAttributes(t *testing.T) {
 					Attribute: netlink.Attribute{
 						Length: 44,
 						Type:   123,
-						Nested: true,
 						Data: []byte{
 							0x14, 0x00, // Depth 1,1
 							0x00, 0x80, // Nested bit
@@ -69,6 +69,7 @@ func TestAttribute_MarshalUnmarshalAttributes(t *testing.T) {
 							0x03, 0x02, 0x01, 0x00,
 						},
 					},
+					Nested: true,
 					Children: []Attribute{
 						{
 							Attribute: netlink.Attribute{
@@ -82,8 +83,8 @@ func TestAttribute_MarshalUnmarshalAttributes(t *testing.T) {
 									0x00, 0x00,
 									0x09, 0x08, 0x07, 0x06,
 								},
-								Nested: true,
 							},
+							Nested: true,
 							Children: []Attribute{
 								{
 									Attribute: netlink.Attribute{
@@ -156,7 +157,7 @@ func TestAttribute_MarshalUnmarshalAttributes(t *testing.T) {
 			}
 
 			if want, got := tt.attrs, attrs; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected attributes:\n- want: %v\n-  got: %v",
+				t.Fatalf("unexpected unmarshal:\n- want: %v\n-  got: %v",
 					want, got)
 			}
 
@@ -169,7 +170,7 @@ func TestAttribute_MarshalUnmarshalAttributes(t *testing.T) {
 			}
 
 			if want, got := tt.b, b; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected attributes:\n- want: %v\n-  got: %v",
+				t.Fatalf("unexpected marshal:\n- want: %v\n-  got: %v",
 					want, got)
 			}
 		})
