@@ -95,10 +95,8 @@ func (a Attribute) Int64() int64 {
 // list of netfilter.Attributes.
 func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
 
-	// TODO: Is this correct? Function should just return nothing if there's
-	// less than a header's worth of data.
 	if len(msg.Data) < nfHeaderLen {
-		msg.Data = make([]byte, nfHeaderLen)
+		return nil, errShortMessage
 	}
 
 	return UnmarshalAttributes(msg.Data[nfHeaderLen:])

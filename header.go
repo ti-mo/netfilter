@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mdlayher/netlink"
+	"github.com/mdlayher/netlink/nlenc"
 )
 
 // HeaderType is a field found in the Netlink header, but Netfilter subsystems divide
@@ -19,21 +20,28 @@ type HeaderType struct {
 	MessageType MessageType
 }
 
-// UnmarshalNetlinkHeaderType unmarshals a netlink.HeaderType into a netfilter.HeaderType.
-// The most significant byte is the subsystem ID and the least significant is the message type.
-func UnmarshalNetlinkHeaderType(nlht netlink.HeaderType) HeaderType {
-	ht := HeaderType{
-		SubsystemID: SubsystemID(uint16(nlht) & 0xff00 >> 8),
-		MessageType: MessageType(uint16(nlht) & 0x00ff),
-	}
+// SubsystemID denotes the Netfilter Subsystem ID the message is for. It is a const that
+// is defined in the kernel at uapi/linux/netfilter/nfnetlink.h.
+//go:generate stringer -type=SubsystemID
+type SubsystemID uint8
 
-	return ht
+// MessageType denotes the message type specific to the subsystem. Its meaning can only
+// be determined after decoding the Netfilter Subsystem type, because it only has meaning
+// in that context. Possible values and string representations need to be implemented in
+// a subsystem-specific package.
+type MessageType uint8
+
+// UnmarshalNetlink unmarshals a netlink.HeaderType into a netfilter.HeaderType.
+// The most significant byte is the subsystem ID and the least significant is the message type.
+func (ht *HeaderType) UnmarshalNetlink(nlht netlink.HeaderType) {
+	ht.SubsystemID = SubsystemID(uint16(nlht) & 0xff00 >> 8)
+	ht.MessageType = MessageType(uint16(nlht) & 0x00ff)
 }
 
-// MarshalNetlinkHeaderType marshals a netfilter.HeaderType into a netlink.HeaderType.
+// MarshalNetlink marshals a netfilter.HeaderType into a netlink.HeaderType.
 // It joins the SubsystemID and MessageType fields back together into a uint16 to be placed
 // into the Netlink header.
-func MarshalNetlinkHeaderType(ht HeaderType) netlink.HeaderType {
+func (ht *HeaderType) MarshalNetlink() netlink.HeaderType {
 	return netlink.HeaderType(uint16(ht.SubsystemID)<<8 | uint16(ht.MessageType))
 }
 
@@ -42,7 +50,49 @@ func (ht HeaderType) String() string {
 	return fmt.Sprintf("%s|%d", ht.SubsystemID, ht.MessageType)
 }
 
-// UnmarshalMessage unmarshals the first 4 bytes of a netlink.Message into a netfilter.Header.
+// Header represents a Netfilter Netlink protocol header.
+// Also known as 'nfgenmsg' at Linux/include/uapi/linux/netfilter/nfnetlink.h.
+// Holds the family, version and resource ID of the Netfilter message.
+// -----------------------------------------------------
+// | Family (1B) | Version (1B) | ResourceID (2 Bytes) |
+// -----------------------------------------------------
+type Header struct {
+	Family     uint8
+	Version    uint8
+	ResourceID uint16
+}
+
+// Size of a Netfilter header (4 Bytes)
+const nfHeaderLen = 4
+
+// UnmarshalBinary unmarshals the contents of the first <nfHeaderLen> bytes of a
+// byte slice into a netfilter.Header structure.
+func (h *Header) UnmarshalBinary(b []byte) error {
+
+	if len(b) < nfHeaderLen {
+		return errShortMessage
+	}
+
+	h.Family = b[0]
+	h.Version = b[1]
+	h.ResourceID = nlenc.Uint16(b[2:4])
+
+	return nil
+}
+
+// MarshalBinary marshals a netfilter.Header into a byte slice.
+func (h *Header) MarshalBinary() ([]byte, error) {
+
+	b := make([]byte, nfHeaderLen)
+
+	b[0] = h.Family
+	b[1] = h.Version
+	nlenc.PutUint16(b[2:4], h.ResourceID)
+
+	return b, nil
+}
+
+// UnmarshalMessage is a convenience method that unmarshals the first 4 bytes of a netlink.Message into a netfilter.Header.
 // It safely calls Header.UnmarshalBinary with the correct offset on the Netlink message's Data field.
 func (h *Header) UnmarshalMessage(msg netlink.Message) error {
 
@@ -54,7 +104,8 @@ func (h *Header) UnmarshalMessage(msg netlink.Message) error {
 	return nil
 }
 
-// MarshalMessage safely marshals a netfilter.Header into the correct offset of a netlink.Message's Data field.
+// MarshalMessage is a convenience method that safely marshals a netfilter.Header into the
+// correct offset of a netlink.Message's Data field.
 func (h *Header) MarshalMessage(msg *netlink.Message) error {
 
 	hb, err := h.MarshalBinary()

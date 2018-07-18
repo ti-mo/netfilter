@@ -49,14 +49,14 @@ func TestHeaderType_MarshalUnmarshalNetlink(t *testing.T) {
 	var gotMarshal netlink.HeaderType
 
 	// Unmarshal nlht into gotUnmarshal and compare the results
-	gotUnmarshal = UnmarshalNetlinkHeaderType(nlht)
+	gotUnmarshal.UnmarshalNetlink(nlht)
 
 	if want, got := nfht, gotUnmarshal; !reflect.DeepEqual(want, got) {
 		t.Fatalf("unexpected unmarshalled Netfilter HeaderType:\n- want: %v\n- got: %v\n", want, got)
 	}
 
 	// Re-marshal gotUnmarshal into gotMarshal and compare the results
-	gotMarshal = MarshalNetlinkHeaderType(gotUnmarshal)
+	gotMarshal = gotUnmarshal.MarshalNetlink()
 
 	if want, got := nlht, gotMarshal; !reflect.DeepEqual(want, got) {
 		t.Fatalf("unexpected re-marshalled output:\n- want: %v\n- got: %v\n", want, got)
