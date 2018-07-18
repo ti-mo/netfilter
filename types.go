@@ -35,20 +35,20 @@ type SubsystemID uint8
 
 // Subsystem specifiers for Netfilter Netlink messages
 const (
-	NFNLSubsysNone SubsystemID = iota // NFNL_SUBSYS_NONE
+	NFSubsysNone SubsystemID = iota // NFNL_SUBSYS_NONE
 
-	NFNLSubsysCTNetlink        // NFNL_SUBSYS_CTNETLINK
-	NFNLSubsysCTNetlinkExp     // NFNL_SUBSYS_CTNETLINK_EXP
-	NFNLSubsysQueue            // NFNL_SUBSYS_QUEUE
-	NFNLSubsysULOG             // NFNL_SUBSYS_ULOG
-	NFNLSubsysOSF              // NFNL_SUBSYS_OSF
-	NFNLSubsysIPSet            // NFNL_SUBSYS_IPSET
-	NFNLSubsysAcct             // NFNL_SUBSYS_ACCT
-	NFNLSubsysCTNetlinkTimeout // NFNL_SUBSYS_CTNETLINK_TIMEOUT
-	NFNLSubsysCTHelper         // NFNL_SUBSYS_CTHELPER
-	NFNLSubsysNFTables         // NFNL_SUBSYS_NFTABLES
-	NFNLSubsysNFTCompat        // NFNL_SUBSYS_NFT_COMPAT
-	NFNLSubsysCount            // NFNL_SUBSYS_COUNT
+	NFSubsysCTNetlink        // NFNL_SUBSYS_CTNETLINK
+	NFSubsysCTNetlinkExp     // NFNL_SUBSYS_CTNETLINK_EXP
+	NFSubsysQueue            // NFNL_SUBSYS_QUEUE
+	NFSubsysULOG             // NFNL_SUBSYS_ULOG
+	NFSubsysOSF              // NFNL_SUBSYS_OSF
+	NFSubsysIPSet            // NFNL_SUBSYS_IPSET
+	NFSubsysAcct             // NFNL_SUBSYS_ACCT
+	NFSubsysCTNetlinkTimeout // NFNL_SUBSYS_CTNETLINK_TIMEOUT
+	NFSubsysCTHelper         // NFNL_SUBSYS_CTHELPER
+	NFSubsysNFTables         // NFNL_SUBSYS_NFTABLES
+	NFSubsysNFTCompat        // NFNL_SUBSYS_NFT_COMPAT
+	NFSubsysCount            // NFNL_SUBSYS_COUNT
 )
 
 // MessageType denotes the Netfilter-specific Netlink message type.

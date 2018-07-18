@@ -41,7 +41,7 @@ func TestHeader_MarshalUnmarshalMessage(t *testing.T) {
 func TestHeaderType_MarshalUnmarshalNetlink(t *testing.T) {
 	nlht := netlink.HeaderType(0x087B) // 0000 1000 0111 1011
 	nfht := HeaderType{
-		SubsystemID: SubsystemID(NFNLSubsysCTNetlinkTimeout),
+		SubsystemID: SubsystemID(NFSubsysCTNetlinkTimeout),
 		MessageType: MessageType(123),
 	}
 
