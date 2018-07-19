@@ -1,6 +1,3 @@
-# IntelliJ
-.idea/
-
 # Generated output
 *_string.go
-*.coverprofile
+cover.out
