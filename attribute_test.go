@@ -8,6 +8,45 @@ import (
 	"github.com/mdlayher/netlink"
 )
 
+func TestAttribute_String(t *testing.T) {
+	var tests = []struct {
+		name string
+		attr Attribute
+		txt  string
+	}{
+		{
+			name: "empty struct",
+			attr: Attribute{},
+			txt:  "<Length 0, Type 0, Nested false, NetByteOrder false, []>",
+		},
+		{
+			name: "empty struct w/ netbyteorder set",
+			attr: Attribute{NetByteOrder: true},
+			txt:  "<Length 0, Type 0, Nested false, NetByteOrder true, []>",
+		},
+		{
+			name: "attribute w/ nested attribute",
+			attr: Attribute{
+				Nested: true,
+				Children: []Attribute{
+					Attribute{},
+				},
+			},
+			txt: "<Length 0, Type 0, Nested true, 1 Children ([<Length 0, Type 0, Nested false, NetByteOrder false, []>])>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.attr.String()
+
+			if want := tt.txt; want != got {
+				t.Fatalf("unexpected string:\n- want: %v\n-  got: %v", want, got)
+			}
+		})
+	}
+}
+
 func TestAttribute_Marshal(t *testing.T) {
 	tests := []struct {
 		name  string

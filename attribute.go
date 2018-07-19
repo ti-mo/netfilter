@@ -27,10 +27,10 @@ const nlaTypeMask = ^(nlaNested | nlaNetByteOrder) // NLA_TYPE_MASK
 
 func (a Attribute) String() string {
 	if a.Nested {
-		return fmt.Sprintf("<Length %v, Type %v, Nested %v, %d Children (%v)>", a.Length, a.Type, a.Nested, len(a.Children), a.Children)
+		return fmt.Sprintf("<Length %d, Type %d, Nested %t, %d Children (%v)>", a.Length, a.Type, a.Nested, len(a.Children), a.Children)
 	}
 
-	return fmt.Sprintf("<Length %v, Type %v, Nested %v, NetByteOrder %v, %v>", a.Length, a.Type, a.Nested, a.NetByteOrder, a.Data)
+	return fmt.Sprintf("<Length %d, Type %d, Nested %t, NetByteOrder %t, %v>", a.Length, a.Type, a.Nested, a.NetByteOrder, a.Data)
 
 }
 
