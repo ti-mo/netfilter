@@ -6,7 +6,92 @@ import (
 	"testing"
 
 	"github.com/mdlayher/netlink"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestAttribute_ScalarPanicEmpty(t *testing.T) {
+
+	emptyData := Attribute{}
+
+	// All should panic on empty Data
+	assert.PanicsWithValue(t, "Uint16: unexpected byte slice length: 0", func() { emptyData.Uint16() })
+	assert.PanicsWithValue(t, "Uint32: unexpected byte slice length: 0", func() { emptyData.Uint32() })
+	assert.PanicsWithValue(t, "Uint64: unexpected byte slice length: 0", func() { emptyData.Uint64() })
+	assert.Panics(t, func() { emptyData.Int16() })
+	assert.Panics(t, func() { emptyData.Int32() })
+	assert.Panics(t, func() { emptyData.Int64() })
+
+}
+
+func TestAttribute_ScalarPanicNested(t *testing.T) {
+
+	nestedData := Attribute{Nested: true}
+
+	// All should panic when nested flag set
+	assert.PanicsWithValue(t, "Uint16: unexpected Nested attribute", func() { nestedData.Uint16() })
+	assert.PanicsWithValue(t, "Uint32: unexpected Nested attribute", func() { nestedData.Uint32() })
+	assert.PanicsWithValue(t, "Uint64: unexpected Nested attribute", func() { nestedData.Uint64() })
+	assert.Panics(t, func() { nestedData.Int16() })
+	assert.Panics(t, func() { nestedData.Int32() })
+	assert.Panics(t, func() { nestedData.Int64() })
+
+}
+
+func TestAttribute_ScalarUint(t *testing.T) {
+
+	u16 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{0xab, 0xcd},
+		},
+	}
+	assert.Equal(t, uint16(0xabcd), u16.Uint16())
+
+	u32 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{0xab, 0xcd, 0xef, 0x12},
+		},
+	}
+	assert.Equal(t, uint32(0xabcdef12), u32.Uint32())
+
+	u64 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{
+				0x01, 0x23, 0x45, 0x67,
+				0x89, 0xab, 0xcd, 0xef,
+			},
+		},
+	}
+	assert.Equal(t, uint64(0x0123456789abcdef), u64.Uint64())
+
+}
+
+func TestAttribute_ScalarInt(t *testing.T) {
+
+	i16 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{0xff, 0xff},
+		},
+	}
+	assert.Equal(t, int16(-1), i16.Int16())
+
+	i32 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{0xff, 0xff, 0xff, 0xff},
+		},
+	}
+	assert.Equal(t, int32(-1), i32.Int32())
+
+	i64 := Attribute{
+		Attribute: netlink.Attribute{
+			Data: []byte{
+				0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff,
+			},
+		},
+	}
+	assert.Equal(t, int64(-1), i64.Int64())
+
+}
 
 func TestAttribute_String(t *testing.T) {
 	var tests = []struct {
