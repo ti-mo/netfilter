@@ -31,18 +31,17 @@ type SubsystemID uint8
 // a subsystem-specific package.
 type MessageType uint8
 
-// UnmarshalNetlink unmarshals a netlink.HeaderType into a netfilter.HeaderType.
+// FromNetlinkHeader unmarshals a netlink.HeaderType into a netfilter.HeaderType.
 // The most significant byte is the subsystem ID and the least significant is the message type.
-func (ht *HeaderType) UnmarshalNetlink(nlht netlink.HeaderType) {
-	ht.SubsystemID = SubsystemID(uint16(nlht) & 0xff00 >> 8)
-	ht.MessageType = MessageType(uint16(nlht) & 0x00ff)
+func (ht *HeaderType) FromNetlinkHeader(nlh netlink.Header) {
+	ht.SubsystemID = SubsystemID(uint16(nlh.Type) & 0xff00 >> 8)
+	ht.MessageType = MessageType(uint16(nlh.Type) & 0x00ff)
 }
 
-// MarshalNetlink marshals a netfilter.HeaderType into a netlink.HeaderType.
-// It joins the SubsystemID and MessageType fields back together into a uint16 to be placed
-// into the Netlink header.
-func (ht *HeaderType) MarshalNetlink() netlink.HeaderType {
-	return netlink.HeaderType(uint16(ht.SubsystemID)<<8 | uint16(ht.MessageType))
+// ToNetlinkHeader marshals a Netfilter HeaderType into a Netlink header's Type field.
+// It joins the SubsystemID and MessageType fields back together into a uint16.
+func (ht *HeaderType) ToNetlinkHeader(nlh *netlink.Header) {
+	nlh.Type = netlink.HeaderType(uint16(ht.SubsystemID)<<8 | uint16(ht.MessageType))
 }
 
 // String representation of the HeaderType in Netfilter context, for debugging purposes.
@@ -64,6 +63,33 @@ type Header struct {
 
 // Size of a Netfilter header (4 Bytes)
 const nfHeaderLen = 4
+
+// FromNetlinkMessage is a convenience method that unmarshals the first 4 bytes of a
+// netlink.Message into a netfilter.Header. It safely calls Header.UnmarshalBinary
+// with the correct offset on the Netlink message's Data field.
+func (h *Header) FromNetlinkMessage(msg netlink.Message) error {
+
+	err := h.UnmarshalBinary(msg.Data[:nfHeaderLen])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ToNetlinkMessage is a convenience method that safely marshals a netfilter.Header into the
+// correct offset of a netlink.Message's Data field.
+func (h *Header) ToNetlinkMessage(msg *netlink.Message) error {
+
+	hb, err := h.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	copy(msg.Data[:nfHeaderLen], hb)
+
+	return nil
+}
 
 // UnmarshalBinary unmarshals the contents of the first <nfHeaderLen> bytes of a
 // byte slice into a netfilter.Header structure.
@@ -90,30 +116,4 @@ func (h *Header) MarshalBinary() ([]byte, error) {
 	nlenc.PutUint16(b[2:4], h.ResourceID)
 
 	return b, nil
-}
-
-// UnmarshalMessage is a convenience method that unmarshals the first 4 bytes of a netlink.Message into a netfilter.Header.
-// It safely calls Header.UnmarshalBinary with the correct offset on the Netlink message's Data field.
-func (h *Header) UnmarshalMessage(msg netlink.Message) error {
-
-	err := h.UnmarshalBinary(msg.Data[:nfHeaderLen])
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// MarshalMessage is a convenience method that safely marshals a netfilter.Header into the
-// correct offset of a netlink.Message's Data field.
-func (h *Header) MarshalMessage(msg *netlink.Message) error {
-
-	hb, err := h.MarshalBinary()
-	if err != nil {
-		return err
-	}
-
-	copy(msg.Data[:nfHeaderLen], hb)
-
-	return nil
 }
