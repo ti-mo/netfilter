@@ -27,3 +27,11 @@ check: test cover
 	go vet ./...
 	megacheck ./...
 	golint -set_exit_status ./...
+
+netfilter-fuzz.zip:
+	go-fuzz-build github.com/ti-mo/netfilter
+	mkdir -p corpus
+
+.PHONY: fuzz
+fuzz: netfilter-fuzz.zip
+	go-fuzz -workdir=. -bin=netfilter-fuzz.zip

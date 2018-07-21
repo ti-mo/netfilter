@@ -1,3 +1,8 @@
 # Generated output
 *_string.go
 cover.out
+
+# Fuzzing
+corpus/
+crashers/
+netfilter-fuzz.zip
