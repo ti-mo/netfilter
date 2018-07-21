@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nlenc"
 )
 
 // An Attribute is a netlink.Attribute that can be nested.
@@ -141,11 +140,12 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 		nfa := Attribute{Attribute: nla}
 
 		// Only consider the rightmost 14 bits for Type
-		nla.Type = nlenc.Uint16(b[2:4]) & nlaTypeMask
+		// Overwrite the value on the copied nested structure
+		nfa.Attribute.Type = nla.Type & nlaTypeMask
 
 		// Boolean flags extracted from the two leftmost bits of Type
-		nfa.Nested = (nlenc.Uint16(b[2:4]) & nlaNested) > 0
-		nfa.NetByteOrder = (nlenc.Uint16(b[2:4]) & nlaNetByteOrder) > 0
+		nfa.Nested = (nla.Type & nlaNested) != 0
+		nfa.NetByteOrder = (nla.Type & nlaNetByteOrder) != 0
 
 		if nfa.NetByteOrder && nfa.Nested {
 			return nil, errInvalidAttributeFlags
