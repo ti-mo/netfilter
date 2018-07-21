@@ -91,9 +91,9 @@ func (a Attribute) Int64() int64 {
 	return int64(a.Uint64())
 }
 
-// UnmarshalMessage unmarshals the correct offset of a netlink.Message into a
+// AttributesFromNetlink unmarshals the correct offset of a netlink.Message into a
 // list of netfilter.Attributes.
-func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
+func AttributesFromNetlink(msg netlink.Message) ([]Attribute, error) {
 
 	if len(msg.Data) < nfHeaderLen {
 		return nil, errShortMessage
@@ -102,16 +102,16 @@ func UnmarshalMessage(msg netlink.Message) ([]Attribute, error) {
 	return UnmarshalAttributes(msg.Data[nfHeaderLen:])
 }
 
-// MarshalMessage marshals a list of netfilter.Attributes into a netlink.Message
-// at the correct offset. Discards existing data past nfHeaderLen.
-func MarshalMessage(msg *netlink.Message, attrs []Attribute) error {
+// AttributesToNetlink marshals a list of netfilter.Attributes into a netlink.Message
+// at the correct offset. Overwrites existing data past nfHeaderLen in the netlink.Message.
+func AttributesToNetlink(attrs []Attribute, msg *netlink.Message) error {
 
 	ba, err := MarshalAttributes(attrs)
 	if err != nil {
 		return err
 	}
 
-	// If there is no valid header present, initialize it
+	// Initiate the message buffer to at least the length of a Netfilter header.
 	if len(msg.Data) < nfHeaderLen {
 		msg.Data = make([]byte, nfHeaderLen)
 	}
@@ -121,8 +121,9 @@ func MarshalMessage(msg *netlink.Message, attrs []Attribute) error {
 	return nil
 }
 
-// UnmarshalAttributes unmarshals a netlink.Attribute's data payload into a
-// list of netfilter.Attributes.
+// UnmarshalAttributes returns an array of netfilter.Attributes decoded from
+// a byte array. This byte array should be taken from the netlink.Message's
+// Data payload after the nfHeaderLen offset.
 func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 
 	var ra []Attribute
@@ -164,6 +165,8 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 }
 
 // MarshalAttributes marshals a nested attribute structure into a byte slice.
+// This byte slice can then be copied into a netlink.Message's Data field after
+// the nfHeaderLen offset.
 func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 	var rb []byte
