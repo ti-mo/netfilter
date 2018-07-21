@@ -35,3 +35,7 @@ netfilter-fuzz.zip:
 .PHONY: fuzz
 fuzz: netfilter-fuzz.zip
 	go-fuzz -workdir=. -bin=netfilter-fuzz.zip
+
+.PHONY: fuzz-clean
+fuzz-clean:
+	rm -r corpus/ crashers/ suppressions/ netfilter-fuzz.zip
