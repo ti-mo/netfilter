@@ -132,6 +132,61 @@ func TestAttribute_String(t *testing.T) {
 	}
 }
 
+func TestAttribute_FromNetlink(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		attrs []Attribute
+		msg   netlink.Message
+		err   error
+	}{
+		{
+			name: "netlink.Message too short",
+			msg: netlink.Message{
+				Data: make([]byte, nfHeaderLen-1),
+			},
+			err: errShortMessage,
+		},
+		{
+			name: "simple attribute",
+			msg: netlink.Message{
+				Data: []byte{0, 0, 0, 0, 7, 0, 0, 0, 2, 1, 0, 0xff},
+			},
+			attrs: []Attribute{
+				{
+					Attribute: netlink.Attribute{
+						Length: 7,
+						Type:   0,
+						Data: []byte{
+							0x02, 0x01, 0x00,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// Extract and parse Netfilter attributes from a Netlink message
+			attrs, err := AttributesFromNetlink(tt.msg)
+			if want, got := tt.err, err; want != got {
+				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v", want, got)
+			}
+
+			// Don't test payload when expecting errors
+			if err != nil {
+				return
+			}
+
+			if want, got := tt.attrs, attrs; !reflect.DeepEqual(want, got) {
+				t.Fatalf("unexpected Attributes:\n- want: %v\n-  got: %v", want, got)
+			}
+		})
+	}
+}
+
 func TestAttribute_ToNetlink(t *testing.T) {
 
 	tests := []struct {
@@ -195,13 +250,13 @@ func TestAttribute_ToNetlink(t *testing.T) {
 			}
 
 			if want, got := tt.msg, gotNlMsg; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected string:\n- want: %v\n-  got: %v", want, got)
+				t.Fatalf("unexpected netlink.Message:\n- want: %v\n-  got: %v", want, got)
 			}
 		})
 	}
 }
 
-func TestAttribute_Marshal(t *testing.T) {
+func TestAttribute_MarshalErrors(t *testing.T) {
 	tests := []struct {
 		name  string
 		attrs []Attribute
@@ -223,6 +278,37 @@ func TestAttribute_Marshal(t *testing.T) {
 			},
 			err: errInvalidAttributeFlags,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := MarshalAttributes(tt.attrs)
+
+			if want, got := tt.err, err; want != got {
+				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
+					want, got)
+			}
+
+			// Don't test payload when expecting errors
+			if err != nil {
+				return
+			}
+
+			if want, got := tt.b, b; !bytes.Equal(want, got) {
+				t.Fatalf("unexpected bytes:\n- want: [%# x]\n-  got: [%# x]",
+					want, got)
+			}
+		})
+	}
+}
+
+func TestAttribute_MarshalTwoWay(t *testing.T) {
+	tests := []struct {
+		name  string
+		attrs []Attribute
+		b     []byte
+		err   error
+	}{
 		{
 			name: "nested bit, type 1, length 0",
 			attrs: []Attribute{
@@ -374,132 +460,6 @@ func TestAttribute_Marshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := MarshalAttributes(tt.attrs)
-
-			if want, got := tt.err, err; want != got {
-				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
-					want, got)
-			}
-
-			// Don't test payload when expecting errors
-			if err != nil {
-				return
-			}
-
-			if want, got := tt.b, b; !bytes.Equal(want, got) {
-				t.Fatalf("unexpected bytes:\n- want: [%# x]\n-  got: [%# x]",
-					want, got)
-			}
-		})
-	}
-}
-
-func TestAttribute_MarshalTwoWay(t *testing.T) {
-	tests := []struct {
-		name  string
-		attrs []Attribute
-		b     []byte
-		err   error
-	}{
-		{
-			name: "multiple nested",
-			attrs: []Attribute{
-				{
-					Attribute: netlink.Attribute{
-						Length: 44,
-						Type:   123,
-						Data: []byte{
-							0x14, 0x00, // Depth 1,1
-							0x00, 0x80, // Nested bit
-							0x08, 0x00, // Depth 2,1
-							0x00, 0x00,
-							0x04, 0x03, 0x02, 0x01,
-							0x08, 0x00, // Depth 2,2
-							0x00, 0x00,
-							0x09, 0x08, 0x07, 0x06,
-							0x14, 0x00, // Depth 1,2
-							0x00, 0x00,
-							0x0F, 0x0E, 0x0D, 0x0C,
-							0x0B, 0x0A, 0x09, 0x08,
-							0x07, 0x06, 0x05, 0x04,
-							0x03, 0x02, 0x01, 0x00,
-						},
-					},
-					Nested: true,
-					Children: []Attribute{
-						{
-							Attribute: netlink.Attribute{
-								Length: 20,
-								Type:   0,
-								Data: []byte{
-									0x08, 0x00, // Depth 2,1
-									0x00, 0x00,
-									0x04, 0x03, 0x02, 0x01,
-									0x08, 0x00, // Depth 2,2
-									0x00, 0x00,
-									0x09, 0x08, 0x07, 0x06,
-								},
-							},
-							Nested: true,
-							Children: []Attribute{
-								{
-									Attribute: netlink.Attribute{
-										Length: 8,
-										Type:   0,
-										Data: []byte{
-											0x04, 0x03, 0x02, 0x01,
-										},
-									},
-								},
-								{
-									Attribute: netlink.Attribute{
-										Length: 8,
-										Type:   0,
-										Data: []byte{
-											0x09, 0x08, 0x07, 0x06,
-										},
-									},
-								},
-							},
-						},
-						{
-							Attribute: netlink.Attribute{
-								Length: 20,
-								Type:   0,
-								Data: []byte{
-									0x0F, 0x0E, 0x0D, 0x0C,
-									0x0B, 0x0A, 0x09, 0x08,
-									0x07, 0x06, 0x05, 0x04,
-									0x03, 0x02, 0x01, 0x00,
-								},
-							},
-						},
-					},
-				},
-			},
-			b: []byte{
-				0x2C, 0x00, // Root level
-				0x7B, 0x80, // type 123, Nested bit
-				0x14, 0x00, // Depth 1,1
-				0x00, 0x80,
-				0x08, 0x00, // Depth 2,1
-				0x00, 0x00,
-				0x04, 0x03, 0x02, 0x01,
-				0x08, 0x00, // Depth 2,2
-				0x00, 0x00,
-				0x09, 0x08, 0x07, 0x06,
-				0x14, 0x00, // Depth 1,2
-				0x00, 0x00,
-				0x0F, 0x0E, 0x0D, 0x0C,
-				0x0B, 0x0A, 0x09, 0x08,
-				0x07, 0x06, 0x05, 0x04,
-				0x03, 0x02, 0x01, 0x00,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 
 			// Unmarshal binary content into nested structures
 			attrs, err := UnmarshalAttributes(tt.b)
@@ -520,7 +480,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			var b []byte
 
 			// Attempt re-marshal into binary form
-			b, err = MarshalAttributes(attrs)
+			b, err = MarshalAttributes(tt.attrs)
 			if err != nil {
 				return
 			}
