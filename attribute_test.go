@@ -1,8 +1,8 @@
 package netfilter
 
 import (
-	"bytes"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mdlayher/netlink"
@@ -260,7 +260,6 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 	tests := []struct {
 		name  string
 		attrs []Attribute
-		b     []byte
 		err   error
 	}{
 		{
@@ -282,21 +281,47 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := MarshalAttributes(tt.attrs)
+			_, err := MarshalAttributes(tt.attrs)
 
 			if want, got := tt.err, err; want != got {
 				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
 					want, got)
 			}
+		})
+	}
+}
 
-			// Don't test payload when expecting errors
-			if err != nil {
-				return
+func TestAttribute_UnmarshalErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		b       []byte
+		err     error
+		errWrap string
+	}{
+		{
+			b:       []byte{1},
+			errWrap: errWrapNetlinkUnmarshalAttrs,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnmarshalAttributes(tt.b)
+
+			if err == nil {
+				t.Fatal("unmarshal did not error")
 			}
 
-			if want, got := tt.b, b; !bytes.Equal(want, got) {
-				t.Fatalf("unexpected bytes:\n- want: [%# x]\n-  got: [%# x]",
-					want, got)
+			if tt.err != nil {
+				if want, got := tt.err, err; want != got {
+					t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
+						want, got.Error())
+				}
+			} else if tt.errWrap != "" {
+				if !strings.HasPrefix(err.Error(), tt.errWrap+":") {
+					t.Fatalf("unexpected wrapped error:\n- expected prefix: %v\n-    error string: %v",
+						tt.errWrap, err)
+				}
 			}
 		})
 	}

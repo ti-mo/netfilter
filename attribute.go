@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mdlayher/netlink"
+	"github.com/pkg/errors"
 )
 
 // An Attribute is a netlink.Attribute that can be nested.
@@ -131,7 +132,7 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 	// nested Netfilter attributes in their binary Data field.
 	attrs, err := netlink.UnmarshalAttributes(b)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, errWrapNetlinkUnmarshalAttrs)
 	}
 
 	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting
