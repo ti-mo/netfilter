@@ -307,7 +307,6 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 		name  string
 		attrs []Attribute
 		b     []byte
-		err   error
 	}{
 		{
 			name: "nested bit, type 1, length 0",
@@ -464,12 +463,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			// Unmarshal binary content into nested structures
 			attrs, err := UnmarshalAttributes(tt.b)
 			if err != nil {
-				return
-			}
-
-			if want, got := tt.err, err; want != got {
-				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
-					want, got)
+				t.Fatalf("unexpected unmarshal error: %v", err)
 			}
 
 			if want, got := tt.attrs, attrs; !reflect.DeepEqual(want, got) {
@@ -482,7 +476,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			// Attempt re-marshal into binary form
 			b, err = MarshalAttributes(tt.attrs)
 			if err != nil {
-				return
+				t.Fatalf("unexpected marshal error: %v", err)
 			}
 
 			if want, got := tt.b, b; !reflect.DeepEqual(want, got) {
