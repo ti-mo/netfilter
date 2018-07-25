@@ -72,26 +72,23 @@ const nlaHeaderLen = 4
 // with the correct offset on the Netlink message's Data field.
 func (h *Header) FromNetlinkMessage(msg netlink.Message) error {
 
-	err := h.UnmarshalBinary(msg.Data[:nfHeaderLen])
-	if err != nil {
-		return err
+	if len(msg.Data) < nfHeaderLen {
+		return errShortMessage
 	}
+
+	// Don't check for errors, only errShortMessage is possible
+	h.UnmarshalBinary(msg.Data[:nfHeaderLen])
 
 	return nil
 }
 
 // ToNetlinkMessage is a convenience method that safely marshals a netfilter.Header into the
 // correct offset of a netlink.Message's Data field.
-func (h *Header) ToNetlinkMessage(msg *netlink.Message) error {
+func (h *Header) ToNetlinkMessage(msg *netlink.Message) {
 
-	hb, err := h.MarshalBinary()
-	if err != nil {
-		return err
-	}
+	hb := h.MarshalBinary()
 
 	copy(msg.Data[:nfHeaderLen], hb)
-
-	return nil
 }
 
 // UnmarshalBinary unmarshals the contents of the first <nfHeaderLen> bytes of a
@@ -110,7 +107,7 @@ func (h *Header) UnmarshalBinary(b []byte) error {
 }
 
 // MarshalBinary marshals a netfilter.Header into a byte slice.
-func (h *Header) MarshalBinary() ([]byte, error) {
+func (h *Header) MarshalBinary() []byte {
 
 	b := make([]byte, nfHeaderLen)
 
@@ -118,5 +115,5 @@ func (h *Header) MarshalBinary() ([]byte, error) {
 	b[1] = h.Version
 	nlenc.PutUint16(b[2:4], h.ResourceID)
 
-	return b, nil
+	return b
 }
