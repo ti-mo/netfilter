@@ -256,20 +256,60 @@ func TestAttribute_ToNetlink(t *testing.T) {
 	}
 }
 
-func TestAttribute_MarshalErrors(t *testing.T) {
+func TestAttribute_MarshalAttributes(t *testing.T) {
 	tests := []struct {
 		name  string
 		attrs []Attribute
-		err   error
+		b     []byte
+	}{
+		{
+			name: "automatic payload length",
+			attrs: []Attribute{
+				{
+					Attribute: netlink.Attribute{
+						Data: []byte{1, 2, 3},
+						// Length is not specified
+					},
+				},
+			},
+			b: []byte{
+				7, 0, 0, 0,
+				1, 2, 3, 0,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			b, err := MarshalAttributes(tt.attrs)
+			if err != nil {
+				t.Fatalf("unexpected marshal error: %v", err)
+			}
+
+			if want, got := tt.b, b; !reflect.DeepEqual(want, got) {
+				t.Fatalf("unexpected marshal:\n- want: %v\n-  got: %v",
+					want, got)
+			}
+		})
+	}
+
+}
+
+func TestAttribute_MarshalErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		attrs   []Attribute
+		err     error
+		errWrap string
 	}{
 		{
 			name: "nested and endianness bits",
 			attrs: []Attribute{
 				{
 					Attribute: netlink.Attribute{
-						Data:   make([]byte, 0),
-						Length: 4,
-						Type:   0,
+						Data: make([]byte, 0),
+						// Length: 4,
 					},
 					Nested:       true,
 					NetByteOrder: true,
@@ -277,15 +317,69 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			},
 			err: errInvalidAttributeFlags,
 		},
+		{
+			name: "error in nested attribute",
+			attrs: []Attribute{
+				{
+					Attribute: netlink.Attribute{
+						Data: make([]byte, 0),
+					},
+					Nested:       true,
+					NetByteOrder: false,
+					Children: []Attribute{
+						{
+							Attribute: netlink.Attribute{
+								Data: make([]byte, 0),
+							},
+							Nested:       true,
+							NetByteOrder: true,
+						},
+					},
+				},
+			},
+			err: errInvalidAttributeFlags,
+		},
+		{
+			name: "nested attribute Length field shorter than netlink header",
+			attrs: []Attribute{
+				{
+					Attribute: netlink.Attribute{
+						Data: make([]byte, 0),
+					},
+					Nested:       true,
+					NetByteOrder: false,
+					Children: []Attribute{
+						{
+							Attribute: netlink.Attribute{
+								Data:   make([]byte, 4),
+								Length: 3, // shorter than netlink attribute header (4)
+							},
+						},
+					},
+				},
+			},
+			errWrap: errWrapNetlinkMarshalAttrs,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := MarshalAttributes(tt.attrs)
 
-			if want, got := tt.err, err; want != got {
-				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
-					want, got)
+			if err == nil {
+				t.Fatal("marshal did not error")
+			}
+
+			if tt.err != nil {
+				if want, got := tt.err, err; want != got {
+					t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
+						want, got.Error())
+				}
+			} else if tt.errWrap != "" {
+				if !strings.HasPrefix(err.Error(), tt.errWrap+":") {
+					t.Fatalf("unexpected wrapped error:\n- expected prefix: %v\n-    error string: %v",
+						tt.errWrap, err)
+				}
 			}
 		})
 	}
@@ -299,8 +393,18 @@ func TestAttribute_UnmarshalErrors(t *testing.T) {
 		errWrap string
 	}{
 		{
+			name:    "netlink unmarshal error",
 			b:       []byte{1},
 			errWrap: errWrapNetlinkUnmarshalAttrs,
+		},
+		{
+			name: "invalid attribute flags on nested attribute",
+			b: []byte{
+				12, 0, 0, 128,
+				8, 0, 0, 192, // 192 = nested + netByteOrder
+				0, 0, 0, 0,
+			},
+			err: errInvalidAttributeFlags,
 		},
 	}
 

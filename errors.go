@@ -10,4 +10,5 @@ var (
 	errShortMessage = errors.New("cannot parse netfilter message because it is too short")
 
 	errWrapNetlinkUnmarshalAttrs = "error unmarshaling netlink attributes"
+	errWrapNetlinkMarshalAttrs   = "error marshaling netlink attributes"
 )

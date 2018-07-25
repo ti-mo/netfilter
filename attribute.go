@@ -204,7 +204,7 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 		nfab, err := nfa.MarshalBinary()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, errWrapNetlinkMarshalAttrs)
 		}
 
 		rb = append(rb, nfab...)
