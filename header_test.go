@@ -67,3 +67,17 @@ func TestHeaderType_ToFromNetlink(t *testing.T) {
 		t.Fatalf("unexpected netlink header:\n- want: %v\n- got: %v\n", want, got)
 	}
 }
+
+func TestHeaderType_String(t *testing.T) {
+	ht := HeaderType{
+		SubsystemID: NFSubsysIPSet,
+		MessageType: 123,
+	}
+
+	htStr := ht.String()
+	want := "NFSubsysIPSet|123"
+
+	if got := htStr; htStr != want {
+		t.Fatalf("HeaderType string mismatch:\n- want: %s\n-  got: %s", want, got)
+	}
+}
