@@ -64,6 +64,9 @@ type Header struct {
 // Size of a Netfilter header (4 Bytes)
 const nfHeaderLen = 4
 
+// From mdlayher/netlink for use in a nested MarshalAttributes()
+const nlaHeaderLen = 4
+
 // FromNetlinkMessage is a convenience method that unmarshals the first 4 bytes of a
 // netlink.Message into a netfilter.Header. It safely calls Header.UnmarshalBinary
 // with the correct offset on the Netlink message's Data field.

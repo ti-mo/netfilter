@@ -197,6 +197,11 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 			nfa.Data = append(nfa.Data, nfnab...)
 		}
 
+		// Automatically set length attribute based on payload length
+		if nfa.Length == 0 {
+			nfa.Length = uint16(nlaHeaderLen + len(nfa.Data))
+		}
+
 		nfab, err := nfa.MarshalBinary()
 		if err != nil {
 			return nil, err
