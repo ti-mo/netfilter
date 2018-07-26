@@ -4,4 +4,5 @@ cover.out
 # Fuzzing
 corpus/
 crashers/
+suppressions/
 netfilter-fuzz.zip
