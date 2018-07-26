@@ -98,3 +98,14 @@ func TestHeaderType_String(t *testing.T) {
 		t.Fatalf("HeaderType string mismatch:\n- want: %s\n-  got: %s", want, got)
 	}
 }
+
+func TestSubsystemID_String(t *testing.T) {
+
+	ssid := SubsystemID(255)
+
+	ssidStr := ssid.String()
+
+	if ssidStr == "" {
+		t.Fatal("SubsystemID string representation empty - did you run `go generate`?")
+	}
+}
