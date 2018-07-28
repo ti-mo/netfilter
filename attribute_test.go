@@ -293,7 +293,6 @@ func TestAttribute_MarshalAttributes(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestAttribute_MarshalErrors(t *testing.T) {
