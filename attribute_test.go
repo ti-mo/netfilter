@@ -40,25 +40,19 @@ func TestAttribute_ScalarPanicNested(t *testing.T) {
 func TestAttribute_ScalarUint(t *testing.T) {
 
 	u16 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{0xab, 0xcd},
-		},
+		Data: []byte{0xab, 0xcd},
 	}
 	assert.Equal(t, uint16(0xabcd), u16.Uint16())
 
 	u32 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{0xab, 0xcd, 0xef, 0x12},
-		},
+		Data: []byte{0xab, 0xcd, 0xef, 0x12},
 	}
 	assert.Equal(t, uint32(0xabcdef12), u32.Uint32())
 
 	u64 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{
-				0x01, 0x23, 0x45, 0x67,
-				0x89, 0xab, 0xcd, 0xef,
-			},
+		Data: []byte{
+			0x01, 0x23, 0x45, 0x67,
+			0x89, 0xab, 0xcd, 0xef,
 		},
 	}
 	assert.Equal(t, uint64(0x0123456789abcdef), u64.Uint64())
@@ -68,25 +62,20 @@ func TestAttribute_ScalarUint(t *testing.T) {
 func TestAttribute_ScalarInt(t *testing.T) {
 
 	i16 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{0xff, 0xff},
-		},
+		Data: []byte{0xff, 0xff},
 	}
 	assert.Equal(t, int16(-1), i16.Int16())
 
 	i32 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{0xff, 0xff, 0xff, 0xff},
-		},
+
+		Data: []byte{0xff, 0xff, 0xff, 0xff},
 	}
 	assert.Equal(t, int32(-1), i32.Int32())
 
 	i64 := Attribute{
-		Attribute: netlink.Attribute{
-			Data: []byte{
-				0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff,
-			},
+		Data: []byte{
+			0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff,
 		},
 	}
 	assert.Equal(t, int64(-1), i64.Int64())
@@ -154,12 +143,10 @@ func TestAttribute_FromNetlink(t *testing.T) {
 			},
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 7,
-						Type:   0,
-						Data: []byte{
-							0x02, 0x01, 0x00,
-						},
+					Length: 7,
+					Type:   0,
+					Data: []byte{
+						0x02, 0x01, 0x00,
 					},
 				},
 			},
@@ -205,15 +192,13 @@ func TestAttribute_ToNetlink(t *testing.T) {
 			name: "simple attribute",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 20,
-						Type:   0,
-						Data: []byte{
-							0x0F, 0x0E, 0x0D, 0x0C,
-							0x0B, 0x0A, 0x09, 0x08,
-							0x07, 0x06, 0x05, 0x04,
-							0x03, 0x02, 0x01, 0x00,
-						},
+					Length: 20,
+					Type:   0,
+					Data: []byte{
+						0x0F, 0x0E, 0x0D, 0x0C,
+						0x0B, 0x0A, 0x09, 0x08,
+						0x07, 0x06, 0x05, 0x04,
+						0x03, 0x02, 0x01, 0x00,
 					},
 				},
 			},
@@ -266,10 +251,8 @@ func TestAttribute_MarshalAttributes(t *testing.T) {
 			name: "automatic payload length",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Data: []byte{1, 2, 3},
-						// Length is not specified
-					},
+					Data: []byte{1, 2, 3},
+					// Length is not specified
 				},
 			},
 			b: []byte{
@@ -306,10 +289,9 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			name: "nested and endianness bits",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Data: make([]byte, 0),
-						// Length: 4,
-					},
+
+					Data: make([]byte, 0),
+					// Length: 4,
 					Nested:       true,
 					NetByteOrder: true,
 				},
@@ -320,16 +302,12 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			name: "error in nested attribute",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Data: make([]byte, 0),
-					},
+					Data:         make([]byte, 0),
 					Nested:       true,
 					NetByteOrder: false,
 					Children: []Attribute{
 						{
-							Attribute: netlink.Attribute{
-								Data: make([]byte, 0),
-							},
+							Data:         make([]byte, 0),
 							Nested:       true,
 							NetByteOrder: true,
 						},
@@ -342,17 +320,13 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			name: "nested attribute Length field shorter than netlink header",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Data: make([]byte, 0),
-					},
+					Data:         make([]byte, 0),
 					Nested:       true,
 					NetByteOrder: false,
 					Children: []Attribute{
 						{
-							Attribute: netlink.Attribute{
-								Data:   make([]byte, 4),
-								Length: 3, // shorter than netlink attribute header (4)
-							},
+							Data:   make([]byte, 4),
+							Length: 3, // shorter than netlink attribute header (4)
 						},
 					},
 				},
@@ -440,11 +414,9 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "nested bit, type 1, length 0",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 4,
-						Type:   1,
-						Data:   make([]byte, 0),
-					},
+					Length: 4,
+					Type:   1,
+					Data:   make([]byte, 0),
 					Nested: true,
 				},
 			},
@@ -457,11 +429,9 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "endianness bit, type 1, length 0",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 4,
-						Type:   1,
-						Data:   make([]byte, 0),
-					},
+					Length:       4,
+					Type:         1,
+					Data:         make([]byte, 0),
 					NetByteOrder: true,
 				},
 			},
@@ -474,11 +444,9 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "max type space, length 0",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 4,
-						Type:   16383,
-						Data:   make([]byte, 0),
-					},
+					Length:       4,
+					Type:         16383,
+					Data:         make([]byte, 0),
 					Nested:       false,
 					NetByteOrder: false,
 				},
@@ -492,73 +460,63 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "multiple nested attributes",
 			attrs: []Attribute{
 				{
-					Attribute: netlink.Attribute{
-						Length: 44,
-						Type:   123,
-						Data: []byte{
-							0x14, 0x00, // Depth 1,1
-							0x00, 0x80, // Nested bit
-							0x08, 0x00, // Depth 2,1
-							0x00, 0x00,
-							0x04, 0x03, 0x02, 0x01,
-							0x08, 0x00, // Depth 2,2
-							0x00, 0x00,
-							0x09, 0x08, 0x07, 0x06,
-							0x14, 0x00, // Depth 1,2
-							0x00, 0x00,
-							0x0F, 0x0E, 0x0D, 0x0C,
-							0x0B, 0x0A, 0x09, 0x08,
-							0x07, 0x06, 0x05, 0x04,
-							0x03, 0x02, 0x01, 0x00,
-						},
+					Length: 44,
+					Type:   123,
+					Data: []byte{
+						0x14, 0x00, // Depth 1,1
+						0x00, 0x80, // Nested bit
+						0x08, 0x00, // Depth 2,1
+						0x00, 0x00,
+						0x04, 0x03, 0x02, 0x01,
+						0x08, 0x00, // Depth 2,2
+						0x00, 0x00,
+						0x09, 0x08, 0x07, 0x06,
+						0x14, 0x00, // Depth 1,2
+						0x00, 0x00,
+						0x0F, 0x0E, 0x0D, 0x0C,
+						0x0B, 0x0A, 0x09, 0x08,
+						0x07, 0x06, 0x05, 0x04,
+						0x03, 0x02, 0x01, 0x00,
 					},
 					Nested: true,
 					Children: []Attribute{
 						{
-							Attribute: netlink.Attribute{
-								Length: 20,
-								Type:   0,
-								Data: []byte{
-									0x08, 0x00, // Depth 2,1
-									0x00, 0x00,
-									0x04, 0x03, 0x02, 0x01,
-									0x08, 0x00, // Depth 2,2
-									0x00, 0x00,
-									0x09, 0x08, 0x07, 0x06,
-								},
+							Length: 20,
+							Type:   0,
+							Data: []byte{
+								0x08, 0x00, // Depth 2,1
+								0x00, 0x00,
+								0x04, 0x03, 0x02, 0x01,
+								0x08, 0x00, // Depth 2,2
+								0x00, 0x00,
+								0x09, 0x08, 0x07, 0x06,
 							},
 							Nested: true,
 							Children: []Attribute{
 								{
-									Attribute: netlink.Attribute{
-										Length: 8,
-										Type:   0,
-										Data: []byte{
-											0x04, 0x03, 0x02, 0x01,
-										},
+									Length: 8,
+									Type:   0,
+									Data: []byte{
+										0x04, 0x03, 0x02, 0x01,
 									},
 								},
 								{
-									Attribute: netlink.Attribute{
-										Length: 8,
-										Type:   0,
-										Data: []byte{
-											0x09, 0x08, 0x07, 0x06,
-										},
+									Length: 8,
+									Type:   0,
+									Data: []byte{
+										0x09, 0x08, 0x07, 0x06,
 									},
 								},
 							},
 						},
 						{
-							Attribute: netlink.Attribute{
-								Length: 20,
-								Type:   0,
-								Data: []byte{
-									0x0F, 0x0E, 0x0D, 0x0C,
-									0x0B, 0x0A, 0x09, 0x08,
-									0x07, 0x06, 0x05, 0x04,
-									0x03, 0x02, 0x01, 0x00,
-								},
+							Length: 20,
+							Type:   0,
+							Data: []byte{
+								0x0F, 0x0E, 0x0D, 0x0C,
+								0x0B, 0x0A, 0x09, 0x08,
+								0x07, 0x06, 0x05, 0x04,
+								0x03, 0x02, 0x01, 0x00,
 							},
 						},
 					},

@@ -8,9 +8,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// An Attribute is a netlink.Attribute that can be nested.
+// An Attribute is a copy of a netlink.Attribute that can be nested.
 type Attribute struct {
-	netlink.Attribute
+
+	// Length of an Attribute, including this field and Type.
+	Length uint16
+
+	// The type of this Attribute, typically matched to a constant.
+	Type uint16
+
+	// An arbitrary payload which is specified by Type.
+	Data []byte
 
 	// Whether the attribute's data contains nested attributes.
 	Nested   bool
@@ -138,11 +146,16 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting
 	for _, nla := range attrs {
 
-		nfa := Attribute{Attribute: nla}
+		// Copy the netlink attribute's fields into the netfilter attribute.
+		nfa := Attribute{
+			Length: nla.Length,
+			Type:   nla.Type,
+			Data:   nla.Data,
+		}
 
 		// Only consider the rightmost 14 bits for Type
 		// Overwrite the value on the copied nested structure
-		nfa.Attribute.Type = nla.Type & nlaTypeMask
+		nfa.Type = nla.Type & nlaTypeMask
 
 		// Boolean flags extracted from the two leftmost bits of Type
 		nfa.Nested = (nla.Type & nlaNested) != 0
@@ -172,6 +185,10 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 	var rb []byte
 
+	// netlink.Attribute to use for MarshalBinary()
+	// Used as scratch buffer, so only requires a single allocation
+	nla := netlink.Attribute{}
+
 	for _, nfa := range attrs {
 
 		if nfa.NetByteOrder && nfa.Nested {
@@ -180,11 +197,13 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 		// Save nested or byte order flags back to the netlink.Attribute's
 		// Type field to include it in the marshaling operation
+		nla.Type = nfa.Type
+
 		switch {
 		case nfa.Nested:
-			nfa.Type = nfa.Type | nlaNested
+			nla.Type = nla.Type | nlaNested
 		case nfa.NetByteOrder:
-			nfa.Type = nfa.Type | nlaNetByteOrder
+			nla.Type = nla.Type | nlaNetByteOrder
 		}
 
 		// Recursively marshal the attribute's children
@@ -194,20 +213,26 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 				return nil, err
 			}
 
-			nfa.Data = append(nfa.Data, nfnab...)
+			nla.Data = append(nla.Data, nfnab...)
+		} else {
+			nla.Data = nfa.Data
 		}
 
-		// Automatically set length attribute based on payload length
+		// Automatically set length attribute based on payload length.
+		// Alternatively, copy length to the netlink Attribute, since that's the
+		// one considered for marshaling.
 		if nfa.Length == 0 {
-			nfa.Length = uint16(nlaHeaderLen + len(nfa.Data))
+			nla.Length = uint16(nlaHeaderLen + len(nla.Data))
+		} else {
+			nla.Length = nfa.Length
 		}
 
-		nfab, err := nfa.MarshalBinary()
+		nlab, err := nla.MarshalBinary()
 		if err != nil {
 			return nil, errors.Wrap(err, errWrapNetlinkMarshalAttrs)
 		}
 
-		rb = append(rb, nfab...)
+		rb = append(rb, nlab...)
 	}
 
 	return rb, nil
