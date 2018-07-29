@@ -13,6 +13,10 @@ generate:
 test: generate
 	go test -v -race ./...
 
+.PHONY: bench
+bench: generate
+	go test ./... -bench=.
+
 cover: cover.out
 cover.out: generate
 	go test -coverprofile=cover.out -covermode=atomic ./...
