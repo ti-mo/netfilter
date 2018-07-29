@@ -1,5 +1,6 @@
 # Generated output
-cover.out
+*.out
+*.test
 
 # Fuzzing
 corpus/
