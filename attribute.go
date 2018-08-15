@@ -28,11 +28,6 @@ type Attribute struct {
 	NetByteOrder bool
 }
 
-// Constants defined in include/uapi/linux/netlink.h
-const nlaNested uint16 = 0x8000                    // NLA_F_NESTED
-const nlaNetByteOrder uint16 = 0x4000              // NLA_F_NET_BYTE_ORDER
-const nlaTypeMask = ^(nlaNested | nlaNetByteOrder) // NLA_TYPE_MASK
-
 func (a Attribute) String() string {
 	if a.Nested {
 		return fmt.Sprintf("<Length %d, Type %d, Nested %t, %d Children (%v)>", a.Length, a.Type, a.Nested, len(a.Children), a.Children)
@@ -155,11 +150,11 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 
 		// Only consider the rightmost 14 bits for Type
 		// Overwrite the value on the copied nested structure
-		nfa.Type = nla.Type & nlaTypeMask
+		nfa.Type = nla.Type & NLATypeMask
 
 		// Boolean flags extracted from the two leftmost bits of Type
-		nfa.Nested = (nla.Type & nlaNested) != 0
-		nfa.NetByteOrder = (nla.Type & nlaNetByteOrder) != 0
+		nfa.Nested = (nla.Type & NLANested) != 0
+		nfa.NetByteOrder = (nla.Type & NLANetByteOrder) != 0
 
 		if nfa.NetByteOrder && nfa.Nested {
 			return nil, errInvalidAttributeFlags
@@ -201,9 +196,9 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 		switch {
 		case nfa.Nested:
-			nla.Type = nla.Type | nlaNested
+			nla.Type = nla.Type | NLANested
 		case nfa.NetByteOrder:
-			nla.Type = nla.Type | nlaNetByteOrder
+			nla.Type = nla.Type | NLANetByteOrder
 		}
 
 		// Recursively marshal the attribute's children

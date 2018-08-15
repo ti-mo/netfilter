@@ -3,6 +3,8 @@ package netfilter
 // Modifier flags for Netlink messages, taken from the 'unix' package.
 // Mentioned in include/uapi/linux/netlink.h.
 const (
+	NLNetfilter = 0xc // NETLINK_NETFILTER
+
 	// Query types.
 	NLFlagRequest      = 0x1  // NLM_F_REQUEST
 	NLFlagMulti        = 0x2  // NLM_F_MULTI
@@ -22,6 +24,11 @@ const (
 	NLFlagExcl    = 0x200 // NLM_F_EXCL
 	NLFlagCreate  = 0x400 // NLM_F_CREATE
 	NLFlagAppend  = 0x800 // NLM_F_APPEND
+
+	// Attribute flags.
+	NLANested       uint16 = 0x8000                         // NLA_F_NESTED
+	NLANetByteOrder uint16 = 0x4000                         // NLA_F_NET_BYTE_ORDER
+	NLATypeMask            = ^(NLANested | NLANetByteOrder) // NLA_TYPE_MASK
 )
 
 // Subsystem specifiers for Netfilter Netlink messages
