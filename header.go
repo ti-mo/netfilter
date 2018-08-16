@@ -40,7 +40,7 @@ func (ht *HeaderType) FromNetlinkHeader(nlh netlink.Header) {
 
 // ToNetlinkHeader marshals a Netfilter HeaderType into a Netlink header's Type field.
 // It joins the SubsystemID and MessageType fields back together into a uint16.
-func (ht *HeaderType) ToNetlinkHeader(nlh *netlink.Header) {
+func (ht HeaderType) ToNetlinkHeader(nlh *netlink.Header) {
 	nlh.Type = netlink.HeaderType(uint16(ht.SubsystemID)<<8 | uint16(ht.MessageType))
 }
 
@@ -83,12 +83,19 @@ func (h *Header) FromNetlinkMessage(msg netlink.Message) error {
 }
 
 // ToNetlinkMessage is a convenience method that safely marshals a netfilter.Header into the
-// correct offset of a netlink.Message's Data field.
-func (h *Header) ToNetlinkMessage(msg *netlink.Message) {
+// correct offset of a netlink.Message's Data field. Raises error if the message's Data
+// field already contains data to prevent clobbering.
+func (h Header) ToNetlinkMessage(msg *netlink.Message) error {
 
 	hb := h.MarshalBinary()
 
-	copy(msg.Data[:nfHeaderLen], hb)
+	if len(msg.Data) != 0 {
+		return errExistingData
+	}
+
+	msg.Data = hb
+
+	return nil
 }
 
 // UnmarshalBinary unmarshals the contents of the first <nfHeaderLen> bytes of a

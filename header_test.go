@@ -18,7 +18,7 @@ func TestHeader_ToFromNetlink(t *testing.T) {
 	nlMsg := netlink.Message{Data: []byte{255, 1, 2, 0}}
 
 	var gotNfHdr Header
-	gotNlMsg := netlink.Message{Data: []byte{0, 0, 0, 0}}
+	gotNlMsg := netlink.Message{Data: []byte{}}
 
 	// Get Netfilter header from Netlink message
 	if err := gotNfHdr.FromNetlinkMessage(nlMsg); err != nil {
@@ -29,8 +29,10 @@ func TestHeader_ToFromNetlink(t *testing.T) {
 		t.Fatalf("unexpected Netfilter header:\n- want: %v\n- got: %v\n", want, got)
 	}
 
-	// Put Netfilter headet back into Netlink message
-	gotNfHdr.ToNetlinkMessage(&gotNlMsg)
+	// Put Netfilter header back into Netlink message
+	if err := gotNfHdr.ToNetlinkMessage(&gotNlMsg); err != nil {
+		t.Fatalf("failed to copy Netfilter header into Netlink message: %v", err)
+	}
 
 	if want, got := nlMsg, gotNlMsg; !reflect.DeepEqual(want, got) {
 		t.Fatalf("unexpected netlink message output:\n- want: %v\n- got: %v\n", want, got)
