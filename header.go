@@ -49,15 +49,15 @@ func (ht HeaderType) String() string {
 	return fmt.Sprintf("%s|%d", ht.SubsystemID, ht.MessageType)
 }
 
-// Header represents a Netfilter Netlink protocol header.
-// Also known as 'nfgenmsg' at Linux/include/uapi/linux/netfilter/nfnetlink.h.
-// Holds the family, version and resource ID of the Netfilter message.
-// -----------------------------------------------------
-// | Family (1B) | Version (1B) | ResourceID (2 Bytes) |
-// -----------------------------------------------------
+// Header represents a Netfilter Netlink protocol header, also known as 'nfgenmsg'.
+// It holds the protocol family, version and resource ID of the Netfilter message.
+//
+// Family describes a protocol family that can be managed using Netfilter (eg. IPv4/6, ARP, Bridge)
+// Version is a protocol version descriptor, and always set to 0 (NFNETLINK_V0)
+// ResourceID is a generic field specific to the upper layer protocol (eg. CPU ID of Conntrack stats)
 type Header struct {
-	Family     uint8
-	Version    uint8
+	Family     ProtoFamily
+	Version    uint8 // Usually NFNETLINK_V0 (Go: NFNLv0)
 	ResourceID uint16
 }
 
@@ -106,7 +106,7 @@ func (h *Header) UnmarshalBinary(b []byte) error {
 		return errShortMessage
 	}
 
-	h.Family = b[0]
+	h.Family = ProtoFamily(b[0])
 	h.Version = b[1]
 	h.ResourceID = nlenc.Uint16(b[2:4])
 
@@ -118,7 +118,7 @@ func (h *Header) MarshalBinary() []byte {
 
 	b := make([]byte, nfHeaderLen)
 
-	b[0] = h.Family
+	b[0] = uint8(h.Family)
 	b[1] = h.Version
 	nlenc.PutUint16(b[2:4], h.ResourceID)
 

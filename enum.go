@@ -29,3 +29,18 @@ const (
 	NFSubsysNFTCompat        // NFNL_SUBSYS_NFT_COMPAT
 	NFSubsysCount            // NFNL_SUBSYS_COUNT
 )
+
+// ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
+type ProtoFamily uint8
+
+// anonymous enum in uapi/linux/netfilter.h
+const (
+	ProtoUnspec ProtoFamily = 0  // NFPROTO_UNSPEC
+	ProtoInet   ProtoFamily = 1  // NFPROTO_INET
+	ProtoIPv4   ProtoFamily = 2  // NFPROTO_IPV4
+	ProtoARP    ProtoFamily = 3  // NFPROTO_ARP
+	ProtoNetDev ProtoFamily = 5  // NFPROTO_NETDEV
+	ProtoBridge ProtoFamily = 7  // NFPROTO_BRIDGE
+	ProtoIPv6   ProtoFamily = 10 // NFPROTO_IPV6
+	ProtoDECNet ProtoFamily = 12 // NFPROTO_DECNET
+)
