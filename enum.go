@@ -4,26 +4,7 @@ package netfilter
 // Mentioned in include/uapi/linux/netlink.h.
 const (
 	NLNetfilter = 0xc // NETLINK_NETFILTER
-
-	// Query types.
-	NLFlagRequest      = 0x1  // NLM_F_REQUEST
-	NLFlagMulti        = 0x2  // NLM_F_MULTI
-	NLFlagAck          = 0x4  // NLM_F_ACK
-	NLFlagEcho         = 0x8  // NLM_F_ECHO
-	NLFlagDumpIntr     = 0x10 // NLM_F_DUMP_INTR
-	NLFlagDumpFiltered = 0x20 // NLM_F_DUMP_FILTERED
-
-	// Modifiers to GET queries.
-	NLFlagRoot   = 0x100                      // NLM_F_ROOT
-	NLFlagMatch  = 0x200                      // NLM_F_MATCH
-	NLFlagAtomic = 0x400                      // NLM_F_ATOMIC
-	NLFlagDump   = (NLFlagRoot | NLFlagMatch) // NLM_F_DUMP
-
-	// Modifiers to NEW queries.
-	NLFlagReplace = 0x100 // NLM_F_REPLACE
-	NLFlagExcl    = 0x200 // NLM_F_EXCL
-	NLFlagCreate  = 0x400 // NLM_F_CREATE
-	NLFlagAppend  = 0x800 // NLM_F_APPEND
+	NFNLv0      = 0   // NFNETLINK_V0
 
 	// Attribute flags.
 	NLANested       uint16 = 0x8000                         // NLA_F_NESTED
