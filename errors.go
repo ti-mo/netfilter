@@ -8,6 +8,7 @@ var (
 	errInvalidAttributeFlags = errors.New("invalid attribute; type cannot have both nested and net byte order flags")
 
 	errShortMessage = errors.New("cannot parse netfilter message because it is too short")
+	errExistingData = errors.New("netlink message already contains Data payload")
 
 	errWrapNetlinkUnmarshalAttrs = "error unmarshaling netlink attributes"
 	errWrapNetlinkMarshalAttrs   = "error marshaling netlink attributes"
