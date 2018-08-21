@@ -44,3 +44,28 @@ const (
 	ProtoIPv6   ProtoFamily = 10 // NFPROTO_IPV6
 	ProtoDECNet ProtoFamily = 12 // NFPROTO_DECNET
 )
+
+// NetlinkGroup represents the multicast groups that can be joined with a Netlink socket.
+type NetlinkGroup uint8
+
+// enum nfnetlink_groups
+const (
+	GroupNone NetlinkGroup = iota
+
+	GroupCTNew
+	GroupCTUpdate
+	GroupCTDestroy
+	GroupCTExpNew
+	GroupCTExpUpdate
+	GroupCTExpDestroy
+	GroupNFTables
+	GroupAcctQuota
+	GroupNFTrace
+)
+
+var (
+	// GroupsCT is a list of all Conntrack multicast groups.
+	GroupsCT = []NetlinkGroup{GroupCTNew, GroupCTUpdate, GroupCTDestroy}
+	// GroupsCTExp is a list of all Conntrack-expect multicast groups.
+	GroupsCTExp = []NetlinkGroup{GroupCTExpNew, GroupCTExpUpdate, GroupCTExpDestroy}
+)
