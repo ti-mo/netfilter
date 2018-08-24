@@ -11,6 +11,10 @@ generate:
 
 .PHONY: test
 test: generate
+	go test -race ./...
+
+.PHONY: testv
+testv: generate
 	go test -v -race ./...
 
 .PHONY: bench
