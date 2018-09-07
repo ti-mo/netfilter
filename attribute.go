@@ -51,9 +51,14 @@ func (a Attribute) Uint16() uint16 {
 	return binary.BigEndian.Uint16(a.Data)
 }
 
-// Int16 converts the result of Uint16() to an int16.
-func (a Attribute) Int16() int16 {
-	return int16(a.Uint16())
+// PutUint16 sets the Attribute's data field to a Uint16 encoded in net byte order.
+func (a *Attribute) PutUint16(v uint16) {
+
+	if len(a.Data) != 2 {
+		a.Data = make([]byte, 2)
+	}
+
+	binary.BigEndian.PutUint16(a.Data, v)
 }
 
 // Uint32 interprets a non-nested Netfilter attribute in network byte order as a uint32.
@@ -68,6 +73,16 @@ func (a Attribute) Uint32() uint32 {
 	}
 
 	return binary.BigEndian.Uint32(a.Data)
+}
+
+// PutUint32 sets the Attribute's data field to a Uint32 encoded in net byte order.
+func (a *Attribute) PutUint32(v uint32) {
+
+	if len(a.Data) != 4 {
+		a.Data = make([]byte, 4)
+	}
+
+	binary.BigEndian.PutUint32(a.Data, v)
 }
 
 // Int32 converts the result of Uint16() to an int32.
@@ -89,9 +104,40 @@ func (a Attribute) Uint64() uint64 {
 	return binary.BigEndian.Uint64(a.Data)
 }
 
+// PutUint64 sets the Attribute's data field to a Uint64 encoded in net byte order.
+func (a *Attribute) PutUint64(v uint64) {
+
+	if len(a.Data) != 8 {
+		a.Data = make([]byte, 8)
+	}
+
+	binary.BigEndian.PutUint64(a.Data, v)
+}
+
 // Int64 converts the result of Uint16() to an int64.
 func (a Attribute) Int64() int64 {
 	return int64(a.Uint64())
+}
+
+// Uint16Bytes gets the big-endian 2-byte representation of a uint16.
+func Uint16Bytes(u uint16) []byte {
+	d := make([]byte, 2)
+	binary.BigEndian.PutUint16(d, u)
+	return d
+}
+
+// Uint32Bytes gets the big-endian 4-byte representation of a uint32.
+func Uint32Bytes(u uint32) []byte {
+	d := make([]byte, 4)
+	binary.BigEndian.PutUint32(d, u)
+	return d
+}
+
+// Uint64Bytes gets the big-endian 8-byte representation of a uint64.
+func Uint64Bytes(u uint64) []byte {
+	d := make([]byte, 8)
+	binary.BigEndian.PutUint64(d, u)
+	return d
 }
 
 // AttributesFromNetlink unmarshals the correct offset of a netlink.Message into a

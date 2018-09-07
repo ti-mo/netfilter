@@ -17,7 +17,7 @@ func TestAttribute_ScalarPanicEmpty(t *testing.T) {
 	assert.PanicsWithValue(t, "Uint16: unexpected byte slice length: 0", func() { emptyData.Uint16() })
 	assert.PanicsWithValue(t, "Uint32: unexpected byte slice length: 0", func() { emptyData.Uint32() })
 	assert.PanicsWithValue(t, "Uint64: unexpected byte slice length: 0", func() { emptyData.Uint64() })
-	assert.Panics(t, func() { emptyData.Int16() })
+
 	assert.Panics(t, func() { emptyData.Int32() })
 	assert.Panics(t, func() { emptyData.Int64() })
 
@@ -31,7 +31,7 @@ func TestAttribute_ScalarPanicNested(t *testing.T) {
 	assert.PanicsWithValue(t, "Uint16: unexpected Nested attribute", func() { nestedData.Uint16() })
 	assert.PanicsWithValue(t, "Uint32: unexpected Nested attribute", func() { nestedData.Uint32() })
 	assert.PanicsWithValue(t, "Uint64: unexpected Nested attribute", func() { nestedData.Uint64() })
-	assert.Panics(t, func() { nestedData.Int16() })
+
 	assert.Panics(t, func() { nestedData.Int32() })
 	assert.Panics(t, func() { nestedData.Int64() })
 
@@ -60,11 +60,6 @@ func TestAttribute_ScalarUint(t *testing.T) {
 }
 
 func TestAttribute_ScalarInt(t *testing.T) {
-
-	i16 := Attribute{
-		Data: []byte{0xff, 0xff},
-	}
-	assert.Equal(t, int16(-1), i16.Int16())
 
 	i32 := Attribute{
 
