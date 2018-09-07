@@ -40,7 +40,17 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 		return nil, errConnIsMulticast
 	}
 
-	return c.conn.Execute(nlm)
+	ret, err := c.conn.Execute(nlm)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check the Netlink response for non-zero error code
+	if err := CheckNetlinkError(ret); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
 }
 
 // JoinGroups attaches the Netlink socket to one or more Netfilter multicast groups.
