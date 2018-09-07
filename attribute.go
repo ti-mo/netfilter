@@ -208,7 +208,7 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 				return nil, err
 			}
 
-			nla.Data = append(nla.Data, nfnab...)
+			nla.Data = nfnab
 		} else {
 			nla.Data = nfa.Data
 		}
