@@ -87,13 +87,11 @@ func (h *Header) FromNetlinkMessage(msg netlink.Message) error {
 // field already contains data to prevent clobbering.
 func (h Header) ToNetlinkMessage(msg *netlink.Message) error {
 
-	hb := h.MarshalBinary()
-
 	if len(msg.Data) != 0 {
 		return errExistingData
 	}
 
-	msg.Data = hb
+	msg.Data = h.MarshalBinary()
 
 	return nil
 }

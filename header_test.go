@@ -29,6 +29,11 @@ func TestHeader_ToFromNetlink(t *testing.T) {
 		t.Fatalf("unexpected Netfilter header:\n- want: %v\n- got: %v\n", want, got)
 	}
 
+	// Try to put Netfilter header into existing Netlink message
+	if want, got := errExistingData, gotNfHdr.ToNetlinkMessage(&nlMsg); want != got {
+		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
+	}
+
 	// Put Netfilter header back into Netlink message
 	if err := gotNfHdr.ToNetlinkMessage(&gotNlMsg); err != nil {
 		t.Fatalf("failed to copy Netfilter header into Netlink message: %v", err)
@@ -43,17 +48,13 @@ func TestHeader_ToFromNetlink(t *testing.T) {
 	nlpl := make([]byte, 3)
 	nlmsg := netlink.Message{Data: nlpl}
 
-	if err := fhdr.FromNetlinkMessage(nlmsg); err != nil {
-		if err != errShortMessage {
-			t.Fatalf("expected error '%s', got: %s", errShortMessage.Error(), err.Error())
-		}
+	if want, got := errShortMessage, fhdr.FromNetlinkMessage(nlmsg); want != got {
+		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
 	}
 
 	// Header.UnmarshalBinary error
-	if err := fhdr.UnmarshalBinary(nlpl); err != nil {
-		if err != errShortMessage {
-			t.Fatalf("expected error '%s', got: %s", errShortMessage.Error(), err.Error())
-		}
+	if want, got := errShortMessage, fhdr.UnmarshalBinary(nlpl); want != got {
+		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
 	}
 
 }
