@@ -1,6 +1,8 @@
 package netfilter
 
 import (
+	"fmt"
+
 	"github.com/mdlayher/netlink"
 )
 
@@ -42,12 +44,7 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 
 	ret, err := c.conn.Execute(nlm)
 	if err != nil {
-		return nil, err
-	}
-
-	// Check the Netlink response for non-zero error code
-	if err := CheckNetlinkError(ret); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(errNetlinkExecute, err)
 	}
 
 	return ret, nil
