@@ -39,24 +39,30 @@ func TestAttribute_ScalarPanicNested(t *testing.T) {
 
 func TestAttribute_ScalarUint(t *testing.T) {
 
-	u16 := Attribute{
-		Data: []byte{0xab, 0xcd},
-	}
-	assert.Equal(t, uint16(0xabcd), u16.Uint16())
+	u16 := uint16(0xabcd)
+	u32 := uint32(0xabcdef12)
+	u64 := uint64(0x0123456789abcdef)
 
-	u32 := Attribute{
-		Data: []byte{0xab, 0xcd, 0xef, 0x12},
-	}
-	assert.Equal(t, uint32(0xabcdef12), u32.Uint32())
+	u16b := []byte{0xab, 0xcd}
+	u32b := []byte{0xab, 0xcd, 0xef, 0x12}
+	u64b := []byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}
 
-	u64 := Attribute{
-		Data: []byte{
-			0x01, 0x23, 0x45, 0x67,
-			0x89, 0xab, 0xcd, 0xef,
-		},
-	}
-	assert.Equal(t, uint64(0x0123456789abcdef), u64.Uint64())
+	var attr Attribute
 
+	attr.PutUint16(u16)
+	assert.Equal(t, u16, attr.Uint16())
+	assert.Equal(t, attr.Data, u16b)
+	assert.Equal(t, Uint16Bytes(u16), u16b)
+
+	attr.PutUint32(u32)
+	assert.Equal(t, u32, attr.Uint32())
+	assert.Equal(t, attr.Data, u32b)
+	assert.Equal(t, Uint32Bytes(u32), u32b)
+
+	attr.PutUint64(u64)
+	assert.Equal(t, u64, attr.Uint64())
+	assert.Equal(t, attr.Data, u64b)
+	assert.Equal(t, Uint64Bytes(u64), u64b)
 }
 
 func TestAttribute_ScalarInt(t *testing.T) {
