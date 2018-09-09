@@ -50,17 +50,17 @@ type NetlinkGroup uint8
 
 // enum nfnetlink_groups
 const (
-	GroupNone NetlinkGroup = iota
+	GroupNone NetlinkGroup = iota // NFNLGRP_NONE
 
-	GroupCTNew
-	GroupCTUpdate
-	GroupCTDestroy
-	GroupCTExpNew
-	GroupCTExpUpdate
-	GroupCTExpDestroy
-	GroupNFTables
-	GroupAcctQuota
-	GroupNFTrace
+	GroupCTNew        // NFNLGRP_CONNTRACK_NEW
+	GroupCTUpdate     // NFNLGRP_CONNTRACK_UPDATE
+	GroupCTDestroy    // NFNLGRP_CONNTRACK_DESTROY
+	GroupCTExpNew     // NFNLGRP_CONNTRACK_EXP_NEW
+	GroupCTExpUpdate  // NFNLGRP_CONNTRACK_EXP_UPDATE
+	GroupCTExpDestroy // NFNLGRP_CONNTRACK_EXP_DESTROY
+	GroupNFTables     // NFNLGRP_NFTABLES
+	GroupAcctQuota    // NFNLGRP_ACCT_QUOTA
+	GroupNFTrace      // NFNLGRP_NFTRACE
 )
 
 var (
