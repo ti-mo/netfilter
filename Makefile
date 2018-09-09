@@ -17,6 +17,19 @@ test: generate
 testv: generate
 	go test -v -race ./...
 
+.PHONY: integration
+integration: generate
+ifeq ($(shell id -u),0)
+	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration ./...
+else
+	$(info Running integration tests under sudo..)
+	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration -exec sudo ./...
+endif
+
+.PHONY: coverhtml-integration
+coverhtml-integration: integration
+	go tool cover -html=cover-int.out
+
 .PHONY: bench
 bench: generate
 	go test ./... -bench=.
