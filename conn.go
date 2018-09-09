@@ -2,6 +2,7 @@ package netfilter
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/mdlayher/netlink"
 )
@@ -13,15 +14,18 @@ type Conn struct {
 	// Marks the Conn as being attached to one or more multicast groups,
 	// it can no longer be used for any queries for its remaining lifetime.
 	isMulticast bool
+
+	// Mutex to protect isMulticast
+	mu sync.RWMutex
 }
 
-// Open opens a new Netlink connection to the Netfilter subsystem
+// Dial opens a new Netlink connection to the Netfilter subsystem
 // and returns it wrapped in a Conn structure.
-func Open() (*Conn, error) {
+func Dial(config *netlink.Config) (*Conn, error) {
 	var c Conn
 	var err error
 
-	c.conn, err = netlink.Dial(NLNetfilter, nil)
+	c.conn, err = netlink.Dial(NLNetfilter, config)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +42,9 @@ func (c *Conn) Close() error {
 // The call will fail if the Conn is marked as Multicast.
 func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	if c.isMulticast {
 		return nil, errConnIsMulticast
 	}
@@ -53,6 +60,10 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 // JoinGroups attaches the Netlink socket to one or more Netfilter multicast groups.
 // Marks the Conn as Multicast, meaning it can no longer be used for any queries.
 func (c *Conn) JoinGroups(groups []NetlinkGroup) error {
+
+	// Write lock
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	for _, group := range groups {
 		err := c.conn.JoinGroup(uint32(group))
@@ -71,6 +82,10 @@ func (c *Conn) JoinGroups(groups []NetlinkGroup) error {
 // Does not remove the Multicast flag, open a separate Conn for making queries instead.
 func (c *Conn) LeaveGroups(groups []NetlinkGroup) error {
 
+	// Write lock
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	for _, group := range groups {
 		err := c.conn.LeaveGroup(uint32(group))
 		if err != nil {
@@ -87,6 +102,10 @@ func (c *Conn) Receive() ([]netlink.Message, error) {
 }
 
 // IsMulticast returns the Conn's Multicast flag. It is set by calling Listen().
-func (c Conn) IsMulticast() bool {
+func (c *Conn) IsMulticast() bool {
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	return c.isMulticast
 }

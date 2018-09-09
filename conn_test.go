@@ -41,9 +41,11 @@ var (
 	connErrMsg = Conn{conn: nlConnMsgError}
 )
 
-func TestConnIntegrationOpenClose(t *testing.T) {
+// No CAP_NET_ADMIN needed to simply open and close a netlink socket,
+// so always test this, even when the other integration tests don't.
+func TestConnIntegrationDialClose(t *testing.T) {
 
-	c, err := Open()
+	c, err := Dial(nil)
 	if err != nil {
 		t.Fatalf("error opening Conn: %s", err)
 	}
