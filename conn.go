@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/mdlayher/netlink"
+	"golang.org/x/sys/unix"
 )
 
 // Conn represents a Netlink connection to the Netfilter subsystem.
@@ -25,7 +26,7 @@ func Dial(config *netlink.Config) (*Conn, error) {
 	var c Conn
 	var err error
 
-	c.conn, err = netlink.Dial(NLNetfilter, config)
+	c.conn, err = netlink.Dial(unix.NETLINK_NETFILTER, config)
 	if err != nil {
 		return nil, err
 	}

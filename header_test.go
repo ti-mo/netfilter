@@ -1,114 +1,86 @@
 package netfilter
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/mdlayher/netlink"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestHeader_ToFromNetlink(t *testing.T) {
+func TestHeader_MarshalTwoWay(t *testing.T) {
 
-	nfHdr := Header{
+	refHdr := Header{
+		SubsystemID: SubsystemID(NFSubsysCTNetlinkTimeout),
+		MessageType: MessageType(123),
+
 		Family:     255,
 		Version:    1,
 		ResourceID: 2,
 	}
 
-	nlMsg := netlink.Message{Data: []byte{255, 1, 2, 0}}
+	refMsg := netlink.Message{Header: netlink.Header{Type: 0x087B}, Data: []byte{255, 1, 2, 0}}
 
-	var gotNfHdr Header
-	gotNlMsg := netlink.Message{Data: []byte{}}
+	var gotHdr Header
+	gotMsg := netlink.Message{Data: make([]byte, 4)}
 
-	// Get Netfilter header from Netlink message
-	if err := gotNfHdr.FromNetlinkMessage(nlMsg); err != nil {
-		t.Fatalf("failed to parse message into header: %v", nlMsg)
+	assert.Nil(t, gotHdr.unmarshal(refMsg))
+
+	if diff := cmp.Diff(refHdr, gotHdr); diff != "" {
+		t.Fatalf("unexpected netfilter Header (-want, +got):\n %s", diff)
 	}
 
-	if want, got := nfHdr, gotNfHdr; want != got {
-		t.Fatalf("unexpected Netfilter header:\n- want: %v\n- got: %v\n", want, got)
+	assert.Nil(t, gotHdr.marshal(&gotMsg))
+
+	if diff := cmp.Diff(refMsg, gotMsg); diff != "" {
+		t.Fatalf("unexpected netlink Message (-want, +got):\n %s", diff)
 	}
 
-	// Try to put Netfilter header into existing Netlink message
-	if want, got := errExistingData, gotNfHdr.ToNetlinkMessage(&nlMsg); want != got {
-		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
-	}
+	// unmarshal error
+	assert.Equal(t, errMessageLen, gotHdr.unmarshal(netlink.Message{}))
 
-	// Put Netfilter header back into Netlink message
-	if err := gotNfHdr.ToNetlinkMessage(&gotNlMsg); err != nil {
-		t.Fatalf("failed to copy Netfilter header into Netlink message: %v", err)
-	}
-
-	if want, got := nlMsg, gotNlMsg; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected netlink message output:\n- want: %v\n- got: %v\n", want, got)
-	}
-
-	// FromNetlinkMessage Error
-	fhdr := Header{}
-	nlpl := make([]byte, 3)
-	nlmsg := netlink.Message{Data: nlpl}
-
-	if want, got := errShortMessage, fhdr.FromNetlinkMessage(nlmsg); want != got {
-		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
-	}
-
-	// Header.UnmarshalBinary error
-	if want, got := errShortMessage, fhdr.UnmarshalBinary(nlpl); want != got {
-		t.Fatalf("unexpected error:\n- want: %s\n-  got: %s", want, got)
-	}
-
+	// marshal error
+	assert.Equal(t, errMessageLen, gotHdr.marshal(&netlink.Message{}))
 }
 
-func TestHeaderType_ToFromNetlink(t *testing.T) {
-
-	nlh := netlink.Header{
-		Type: 0x087B, // 0000 1000 0111 1011
-	}
-
-	nfht := HeaderType{
-		SubsystemID: SubsystemID(NFSubsysCTNetlinkTimeout),
-		MessageType: MessageType(123),
-	}
-
-	var gotNfht HeaderType
-	var gotNlh netlink.Header
-
-	// Unmarshal netlink header into netfilter HeaderType
-	gotNfht.FromNetlinkHeader(nlh)
-
-	if want, got := nfht, gotNfht; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected unmarshalled Netfilter HeaderType:\n- want: %v\n- got: %v\n", want, got)
-	}
-
-	// Convert gotNfht back into gotNlh and compare the results
-	gotNfht.ToNetlinkHeader(&gotNlh)
-
-	if want, got := nlh, gotNlh; !reflect.DeepEqual(want, got) {
-		t.Fatalf("unexpected netlink header:\n- want: %v\n- got: %v\n", want, got)
-	}
-}
-
-func TestHeaderType_String(t *testing.T) {
-	ht := HeaderType{
+func TestHeader_String(t *testing.T) {
+	ht := Header{
 		SubsystemID: NFSubsysIPSet,
 		MessageType: 123,
 	}
 
-	htStr := ht.String()
-	want := "NFSubsysIPSet|123"
+	want := "<Subsystem: NFSubsysIPSet, Message Type: 123, Family: ProtoUnspec, Version: 0, ResourceID: 0>"
 
-	if got := htStr; htStr != want {
-		t.Fatalf("HeaderType string mismatch:\n- want: %s\n-  got: %s", want, got)
+	if got := ht.String(); want != got {
+		t.Fatalf("unexpected string:\n- want: %s\n-  got: %s", want, got)
+	}
+}
+
+func TestProtoFamily_String(t *testing.T) {
+
+	if ProtoFamily(255).String() == "" {
+		t.Fatal("ProtoFamily string representation empty - did you run `go generate`?")
+	}
+
+	pf := map[ProtoFamily]string{
+		ProtoUnspec: "ProtoUnspec",
+		ProtoInet:   "ProtoInet",
+		ProtoIPv4:   "ProtoIPv4",
+		ProtoARP:    "ProtoARP",
+		ProtoNetDev: "ProtoNetDev",
+		ProtoBridge: "ProtoBridge",
+		ProtoIPv6:   "ProtoIPv6",
+		ProtoDECNet: "ProtoDECNet",
+	}
+
+	for k, v := range pf {
+		assert.Equal(t, k.String(), v)
 	}
 }
 
 func TestSubsystemID_String(t *testing.T) {
 
-	ssid := SubsystemID(255)
-
-	ssidStr := ssid.String()
-
-	if ssidStr == "" {
+	if SubsystemID(255).String() == "" {
 		t.Fatal("SubsystemID string representation empty - did you run `go generate`?")
 	}
 }

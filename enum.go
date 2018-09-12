@@ -1,17 +1,5 @@
 package netfilter
 
-// Modifier flags for Netlink messages, taken from the 'unix' package.
-// Mentioned in include/uapi/linux/netlink.h.
-const (
-	NLNetfilter = 0xc // NETLINK_NETFILTER
-	NFNLv0      = 0   // NFNETLINK_V0
-
-	// Attribute flags.
-	NLANested       uint16 = 0x8000                         // NLA_F_NESTED
-	NLANetByteOrder uint16 = 0x4000                         // NLA_F_NET_BYTE_ORDER
-	NLATypeMask            = ^(NLANested | NLANetByteOrder) // NLA_TYPE_MASK
-)
-
 // Subsystem specifiers for Netfilter Netlink messages
 const (
 	NFSubsysNone SubsystemID = iota // NFNL_SUBSYS_NONE
@@ -31,6 +19,7 @@ const (
 )
 
 // ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
+//go:generate stringer -type=ProtoFamily
 type ProtoFamily uint8
 
 // anonymous enum in uapi/linux/netfilter.h

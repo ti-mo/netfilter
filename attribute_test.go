@@ -1,11 +1,11 @@
 package netfilter
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/mdlayher/netlink"
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,126 +122,6 @@ func TestAttribute_String(t *testing.T) {
 	}
 }
 
-func TestAttribute_FromNetlink(t *testing.T) {
-
-	tests := []struct {
-		name  string
-		attrs []Attribute
-		msg   netlink.Message
-		err   error
-	}{
-		{
-			name: "netlink.Message too short",
-			msg: netlink.Message{
-				Data: make([]byte, nfHeaderLen-1),
-			},
-			err: errShortMessage,
-		},
-		{
-			name: "simple attribute",
-			msg: netlink.Message{
-				Data: []byte{0, 0, 0, 0, 7, 0, 0, 0, 2, 1, 0, 0xff},
-			},
-			attrs: []Attribute{
-				{
-					Length: 7,
-					Type:   0,
-					Data: []byte{
-						0x02, 0x01, 0x00,
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			// Extract and parse Netfilter attributes from a Netlink message
-			attrs, err := AttributesFromNetlink(tt.msg)
-			if want, got := tt.err, err; want != got {
-				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v", want, got)
-			}
-
-			// Don't test payload when expecting errors
-			if err != nil {
-				return
-			}
-
-			if want, got := tt.attrs, attrs; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected Attributes:\n- want: %v\n-  got: %v", want, got)
-			}
-		})
-	}
-}
-
-func TestAttribute_ToNetlink(t *testing.T) {
-
-	tests := []struct {
-		name  string
-		attrs []Attribute
-		msg   netlink.Message
-		err   error
-	}{
-		{
-			name: "initialize netlink.Message.Data",
-			msg: netlink.Message{
-				Data: []byte{0, 0, 0, 0},
-			},
-		},
-		{
-			name: "simple attribute",
-			attrs: []Attribute{
-				{
-					Length: 20,
-					Type:   0,
-					Data: []byte{
-						0x0F, 0x0E, 0x0D, 0x0C,
-						0x0B, 0x0A, 0x09, 0x08,
-						0x07, 0x06, 0x05, 0x04,
-						0x03, 0x02, 0x01, 0x00,
-					},
-				},
-			},
-			msg: netlink.Message{
-				Data: []byte{0, 0, 0, 0, 20, 0, 0, 0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
-			},
-		},
-		{
-			name: "propagate errors to caller",
-			attrs: []Attribute{
-				{
-					Nested:       true,
-					NetByteOrder: true,
-				},
-			},
-			err: errInvalidAttributeFlags,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			var gotNlMsg netlink.Message
-
-			// Serialize netfilter.Attributes to a netlink.Message
-			err := AttributesToNetlink(tt.attrs, &gotNlMsg)
-			if want, got := tt.err, err; want != got {
-				t.Fatalf("unexpected error:\n- want: %v\n-  got: %v", want, got)
-			}
-
-			// Don't test payload when expecting errors
-			if err != nil {
-				return
-			}
-
-			if want, got := tt.msg, gotNlMsg; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected netlink.Message:\n- want: %v\n-  got: %v", want, got)
-			}
-		})
-	}
-}
-
 func TestAttribute_MarshalAttributes(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -253,7 +133,6 @@ func TestAttribute_MarshalAttributes(t *testing.T) {
 			attrs: []Attribute{
 				{
 					Data: []byte{1, 2, 3},
-					// Length is not specified
 				},
 			},
 			b: []byte{
@@ -266,14 +145,13 @@ func TestAttribute_MarshalAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			b, err := MarshalAttributes(tt.attrs)
+			b, err := marshalAttributes(tt.attrs)
 			if err != nil {
 				t.Fatalf("unexpected marshal error: %v", err)
 			}
 
-			if want, got := tt.b, b; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected marshal:\n- want: %v\n-  got: %v",
-					want, got)
+			if diff := cmp.Diff(tt.b, b); diff != "" {
+				t.Fatalf("unexpected marshal (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -291,8 +169,7 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			attrs: []Attribute{
 				{
 
-					Data: make([]byte, 0),
-					// Length: 4,
+					Data:         make([]byte, 0),
 					Nested:       true,
 					NetByteOrder: true,
 				},
@@ -317,28 +194,11 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 			},
 			err: errInvalidAttributeFlags,
 		},
-		{
-			name: "nested attribute Length field shorter than netlink header",
-			attrs: []Attribute{
-				{
-					Data:         make([]byte, 0),
-					Nested:       true,
-					NetByteOrder: false,
-					Children: []Attribute{
-						{
-							Data:   make([]byte, 4),
-							Length: 3, // shorter than netlink attribute header (4)
-						},
-					},
-				},
-			},
-			errWrap: errWrapNetlinkMarshalAttrs,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := MarshalAttributes(tt.attrs)
+			_, err := marshalAttributes(tt.attrs)
 
 			if err == nil {
 				t.Fatal("marshal did not error")
@@ -384,7 +244,7 @@ func TestAttribute_UnmarshalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := UnmarshalAttributes(tt.b)
+			_, err := unmarshalAttributes(tt.b)
 
 			if err == nil {
 				t.Fatal("unmarshal did not error")
@@ -415,7 +275,6 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "nested bit, type 1, length 0",
 			attrs: []Attribute{
 				{
-					Length: 4,
 					Type:   1,
 					Data:   make([]byte, 0),
 					Nested: true,
@@ -430,7 +289,6 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "endianness bit, type 1, length 0",
 			attrs: []Attribute{
 				{
-					Length:       4,
 					Type:         1,
 					Data:         make([]byte, 0),
 					NetByteOrder: true,
@@ -445,7 +303,6 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "max type space, length 0",
 			attrs: []Attribute{
 				{
-					Length:       4,
 					Type:         16383,
 					Data:         make([]byte, 0),
 					Nested:       false,
@@ -461,8 +318,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 			name: "multiple nested attributes",
 			attrs: []Attribute{
 				{
-					Length: 44,
-					Type:   123,
+					Type: 123,
 					Data: []byte{
 						0x14, 0x00, // Depth 1,1
 						0x00, 0x80, // Nested bit
@@ -482,8 +338,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 					Nested: true,
 					Children: []Attribute{
 						{
-							Length: 20,
-							Type:   0,
+							Type: 0,
 							Data: []byte{
 								0x08, 0x00, // Depth 2,1
 								0x00, 0x00,
@@ -495,15 +350,13 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 							Nested: true,
 							Children: []Attribute{
 								{
-									Length: 8,
-									Type:   0,
+									Type: 0,
 									Data: []byte{
 										0x04, 0x03, 0x02, 0x01,
 									},
 								},
 								{
-									Length: 8,
-									Type:   0,
+									Type: 0,
 									Data: []byte{
 										0x09, 0x08, 0x07, 0x06,
 									},
@@ -511,8 +364,7 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 							},
 						},
 						{
-							Length: 20,
-							Type:   0,
+							Type: 0,
 							Data: []byte{
 								0x0F, 0x0E, 0x0D, 0x0C,
 								0x0B, 0x0A, 0x09, 0x08,
@@ -548,27 +400,25 @@ func TestAttribute_MarshalTwoWay(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// Unmarshal binary content into nested structures
-			attrs, err := UnmarshalAttributes(tt.b)
+			attrs, err := unmarshalAttributes(tt.b)
 			if err != nil {
 				t.Fatalf("unexpected unmarshal error: %v", err)
 			}
 
-			if want, got := tt.attrs, attrs; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected unmarshal:\n- want: %v\n-  got: %v",
-					want, got)
+			if diff := cmp.Diff(tt.attrs, attrs); diff != "" {
+				t.Fatalf("unexpected unmarshal (-want +got):\n%s", diff)
 			}
 
 			var b []byte
 
 			// Attempt re-marshal into binary form
-			b, err = MarshalAttributes(tt.attrs)
+			b, err = marshalAttributes(tt.attrs)
 			if err != nil {
 				t.Fatalf("unexpected marshal error: %v", err)
 			}
 
-			if want, got := tt.b, b; !reflect.DeepEqual(want, got) {
-				t.Fatalf("unexpected marshal:\n- want: %v\n-  got: %v",
-					want, got)
+			if diff := cmp.Diff(tt.b, b); diff != "" {
+				t.Fatalf("unexpected marshal (-want +got):\n%s", diff)
 			}
 		})
 	}

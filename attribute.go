@@ -6,13 +6,11 @@ import (
 
 	"github.com/mdlayher/netlink"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 // An Attribute is a copy of a netlink.Attribute that can be nested.
 type Attribute struct {
-
-	// Length of an Attribute, including this field and Type.
-	Length uint16
 
 	// The type of this Attribute, typically matched to a constant.
 	Type uint16
@@ -30,10 +28,10 @@ type Attribute struct {
 
 func (a Attribute) String() string {
 	if a.Nested {
-		return fmt.Sprintf("<Length %d, Type %d, Nested %t, %d Children (%v)>", a.Length, a.Type, a.Nested, len(a.Children), a.Children)
+		return fmt.Sprintf("<Length %d, Type %d, Nested %t, %d Children (%v)>", len(a.Data), a.Type, a.Nested, len(a.Children), a.Children)
 	}
 
-	return fmt.Sprintf("<Length %d, Type %d, Nested %t, NetByteOrder %t, %v>", a.Length, a.Type, a.Nested, a.NetByteOrder, a.Data)
+	return fmt.Sprintf("<Length %d, Type %d, Nested %t, NetByteOrder %t, %v>", len(a.Data), a.Type, a.Nested, a.NetByteOrder, a.Data)
 
 }
 
@@ -140,42 +138,10 @@ func Uint64Bytes(u uint64) []byte {
 	return d
 }
 
-// AttributesFromNetlink unmarshals the correct offset of a netlink.Message into a
-// list of netfilter.Attributes.
-func AttributesFromNetlink(msg netlink.Message) ([]Attribute, error) {
-
-	if len(msg.Data) < nfHeaderLen {
-		return nil, errShortMessage
-	}
-
-	return UnmarshalAttributes(msg.Data[nfHeaderLen:])
-}
-
-// AttributesToNetlink marshals a list of netfilter.Attributes into a netlink.Message
-// at the correct offset. Overwrites existing data past nfHeaderLen in the netlink.Message.
-func AttributesToNetlink(attrs []Attribute, msg *netlink.Message) error {
-
-	ba, err := MarshalAttributes(attrs)
-	if err != nil {
-		return err
-	}
-
-	// Initiate the message buffer to at least the length of a Netfilter header.
-	if len(msg.Data) < nfHeaderLen {
-		msg.Data = make([]byte, nfHeaderLen)
-	}
-
-	msg.Data = append(msg.Data[:nfHeaderLen], ba...)
-
-	return nil
-}
-
-// UnmarshalAttributes returns an array of netfilter.Attributes decoded from
+// unmarshalAttributes returns an array of netfilter.Attributes decoded from
 // a byte array. This byte array should be taken from the netlink.Message's
 // Data payload after the nfHeaderLen offset.
-func UnmarshalAttributes(b []byte) ([]Attribute, error) {
-
-	var ra []Attribute
+func unmarshalAttributes(b []byte) ([]Attribute, error) {
 
 	// Obtain a list of parsed netlink attributes possibly holding
 	// nested Netfilter attributes in their binary Data field.
@@ -184,23 +150,29 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 		return nil, errors.Wrap(err, errWrapNetlinkUnmarshalAttrs)
 	}
 
+	var ra []Attribute
+
+	// Only allocate backing array when there are netlink attributes to decode.
+	if len(attrs) != 0 {
+		ra = make([]Attribute, 0, len(attrs))
+	}
+
 	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting
 	for _, nla := range attrs {
 
 		// Copy the netlink attribute's fields into the netfilter attribute.
 		nfa := Attribute{
-			Length: nla.Length,
-			Type:   nla.Type,
-			Data:   nla.Data,
+			Type: nla.Type,
+			Data: nla.Data,
 		}
 
 		// Only consider the rightmost 14 bits for Type
 		// Overwrite the value on the copied nested structure
-		nfa.Type = nla.Type & NLATypeMask
+		nfa.Type = nla.Type & ^(uint16(unix.NLA_F_NESTED) | uint16(unix.NLA_F_NET_BYTEORDER))
 
 		// Boolean flags extracted from the two leftmost bits of Type
-		nfa.Nested = (nla.Type & NLANested) != 0
-		nfa.NetByteOrder = (nla.Type & NLANetByteOrder) != 0
+		nfa.Nested = (nla.Type & uint16(unix.NLA_F_NESTED)) != 0
+		nfa.NetByteOrder = (nla.Type & uint16(unix.NLA_F_NET_BYTEORDER)) != 0
 
 		if nfa.NetByteOrder && nfa.Nested {
 			return nil, errInvalidAttributeFlags
@@ -208,7 +180,7 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 
 		// Unmarshal recursively if the netlink Nested flag is set
 		if nfa.Nested {
-			if nfa.Children, err = UnmarshalAttributes(nla.Data); err != nil {
+			if nfa.Children, err = unmarshalAttributes(nla.Data); err != nil {
 				return nil, err
 			}
 		}
@@ -219,16 +191,16 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 	return ra, nil
 }
 
-// MarshalAttributes marshals a nested attribute structure into a byte slice.
+// marshalAttributes marshals a nested attribute structure into a byte slice.
 // This byte slice can then be copied into a netlink.Message's Data field after
 // the nfHeaderLen offset.
-func MarshalAttributes(attrs []Attribute) ([]byte, error) {
+func marshalAttributes(attrs []Attribute) ([]byte, error) {
 
-	var rb []byte
-
-	// netlink.Attribute to use for MarshalBinary()
-	// Used as scratch buffer, so only requires a single allocation
+	// netlink.Attribute to use as scratch buffer, requires a single allocation
 	nla := netlink.Attribute{}
+
+	// Output array, initialized to the length of the input array
+	ra := make([]netlink.Attribute, 0, len(attrs))
 
 	for _, nfa := range attrs {
 
@@ -242,14 +214,14 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 		switch {
 		case nfa.Nested:
-			nla.Type = nla.Type | NLANested
+			nla.Type = nla.Type | unix.NLA_F_NESTED
 		case nfa.NetByteOrder:
-			nla.Type = nla.Type | NLANetByteOrder
+			nla.Type = nla.Type | unix.NLA_F_NET_BYTEORDER
 		}
 
 		// Recursively marshal the attribute's children
 		if nfa.Nested {
-			nfnab, err := MarshalAttributes(nfa.Children)
+			nfnab, err := marshalAttributes(nfa.Children)
 			if err != nil {
 				return nil, err
 			}
@@ -259,22 +231,9 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 			nla.Data = nfa.Data
 		}
 
-		// Automatically set length attribute based on payload length.
-		// Alternatively, copy length to the netlink Attribute, since that's the
-		// one considered for marshaling.
-		if nfa.Length == 0 {
-			nla.Length = uint16(nlaHeaderLen + len(nla.Data))
-		} else {
-			nla.Length = nfa.Length
-		}
-
-		nlab, err := nla.MarshalBinary()
-		if err != nil {
-			return nil, errors.Wrap(err, errWrapNetlinkMarshalAttrs)
-		}
-
-		rb = append(rb, nlab...)
+		ra = append(ra, nla)
 	}
 
-	return rb, nil
+	// Marshal all Netfilter attributes into binary representation of Netlink attributes
+	return netlink.MarshalAttributes(ra)
 }
