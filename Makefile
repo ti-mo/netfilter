@@ -1,3 +1,6 @@
+SOURCEDIR = .
+SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
+
 # Require the Go compiler/toolchain to be installed
 ifeq (, $(shell which go 2>/dev/null))
 $(error No 'go' found in $(PATH), please install the Go compiler for your system)
@@ -10,15 +13,15 @@ generate:
 	go generate ./...
 
 .PHONY: test
-test: generate
+test:
 	go test -race ./...
 
 .PHONY: testv
-testv: generate
+testv:
 	go test -v -race ./...
 
 .PHONY: integration
-integration: generate
+integration:
 ifeq ($(shell id -u),0)
 	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration ./...
 else
@@ -31,11 +34,11 @@ coverhtml-integration: integration
 	go tool cover -html=cover-int.out
 
 .PHONY: bench
-bench: generate
+bench:
 	go test ./... -bench=.
 
 cover: cover.out
-cover.out: generate
+cover.out: $(SOURCES)
 	go test -coverprofile=cover.out -covermode=atomic ./...
 	go tool cover -func=cover.out
 
