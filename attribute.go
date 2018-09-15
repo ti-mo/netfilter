@@ -162,13 +162,10 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 
 		// Copy the netlink attribute's fields into the netfilter attribute.
 		nfa := Attribute{
-			Type: nla.Type,
+			// Only consider the rightmost 14 bits for Type
+			Type: nla.Type & ^(uint16(unix.NLA_F_NESTED) | uint16(unix.NLA_F_NET_BYTEORDER)),
 			Data: nla.Data,
 		}
-
-		// Only consider the rightmost 14 bits for Type
-		// Overwrite the value on the copied nested structure
-		nfa.Type = nla.Type & ^(uint16(unix.NLA_F_NESTED) | uint16(unix.NLA_F_NET_BYTEORDER))
 
 		// Boolean flags extracted from the two leftmost bits of Type
 		nfa.Nested = (nla.Type & uint16(unix.NLA_F_NESTED)) != 0
