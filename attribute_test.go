@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAttribute_ScalarPanicEmpty(t *testing.T) {
+func TestAttributeScalarPanicEmpty(t *testing.T) {
 
 	emptyData := Attribute{}
 
@@ -23,7 +23,7 @@ func TestAttribute_ScalarPanicEmpty(t *testing.T) {
 
 }
 
-func TestAttribute_ScalarPanicNested(t *testing.T) {
+func TestAttributeScalarPanicNested(t *testing.T) {
 
 	nestedData := Attribute{Nested: true}
 
@@ -37,7 +37,7 @@ func TestAttribute_ScalarPanicNested(t *testing.T) {
 
 }
 
-func TestAttribute_ScalarUint(t *testing.T) {
+func TestAttributeScalarUint(t *testing.T) {
 
 	u16 := uint16(0xabcd)
 	u32 := uint32(0xabcdef12)
@@ -65,7 +65,7 @@ func TestAttribute_ScalarUint(t *testing.T) {
 	assert.Equal(t, Uint64Bytes(u64), u64b)
 }
 
-func TestAttribute_ScalarInt(t *testing.T) {
+func TestAttributeScalarInt(t *testing.T) {
 
 	i32 := Attribute{
 
@@ -83,7 +83,7 @@ func TestAttribute_ScalarInt(t *testing.T) {
 
 }
 
-func TestAttribute_String(t *testing.T) {
+func TestAttributeString(t *testing.T) {
 	var tests = []struct {
 		name string
 		attr Attribute
@@ -122,7 +122,7 @@ func TestAttribute_String(t *testing.T) {
 	}
 }
 
-func TestAttribute_MarshalAttributes(t *testing.T) {
+func TestAttributeMarshalAttributes(t *testing.T) {
 	tests := []struct {
 		name  string
 		attrs []Attribute
@@ -157,7 +157,7 @@ func TestAttribute_MarshalAttributes(t *testing.T) {
 	}
 }
 
-func TestAttribute_MarshalErrors(t *testing.T) {
+func TestAttributeMarshalErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		attrs   []Attribute
@@ -219,7 +219,7 @@ func TestAttribute_MarshalErrors(t *testing.T) {
 	}
 }
 
-func TestAttribute_UnmarshalErrors(t *testing.T) {
+func TestAttributeUnmarshalErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		b       []byte
@@ -265,7 +265,7 @@ func TestAttribute_UnmarshalErrors(t *testing.T) {
 	}
 }
 
-func TestAttribute_MarshalTwoWay(t *testing.T) {
+func TestAttributeMarshalTwoWay(t *testing.T) {
 	tests := []struct {
 		name  string
 		attrs []Attribute

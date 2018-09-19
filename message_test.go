@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMessage_UnmarshalNetlink(t *testing.T) {
+func TestMessageUnmarshalNetlink(t *testing.T) {
 
 	tests := []struct {
 		name  string
@@ -70,7 +70,7 @@ func TestMessage_UnmarshalNetlink(t *testing.T) {
 	}
 }
 
-func TestAttribute_MarshalNetlink(t *testing.T) {
+func TestAttributeMarshalNetlink(t *testing.T) {
 
 	tests := []struct {
 		name  string

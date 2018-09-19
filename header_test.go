@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHeader_MarshalTwoWay(t *testing.T) {
+func TestHeaderMarshalTwoWay(t *testing.T) {
 
 	refHdr := Header{
 		SubsystemID: SubsystemID(NFSubsysCTNetlinkTimeout),
@@ -43,7 +43,7 @@ func TestHeader_MarshalTwoWay(t *testing.T) {
 	assert.Equal(t, errMessageLen, gotHdr.marshal(&netlink.Message{}))
 }
 
-func TestHeader_String(t *testing.T) {
+func TestHeaderString(t *testing.T) {
 	ht := Header{
 		SubsystemID: NFSubsysIPSet,
 		MessageType: 123,
@@ -56,7 +56,7 @@ func TestHeader_String(t *testing.T) {
 	}
 }
 
-func TestProtoFamily_String(t *testing.T) {
+func TestProtoFamilyString(t *testing.T) {
 
 	if ProtoFamily(255).String() == "" {
 		t.Fatal("ProtoFamily string representation empty - did you run `go generate`?")
@@ -78,7 +78,7 @@ func TestProtoFamily_String(t *testing.T) {
 	}
 }
 
-func TestSubsystemID_String(t *testing.T) {
+func TestSubsystemIDString(t *testing.T) {
 
 	if SubsystemID(255).String() == "" {
 		t.Fatal("SubsystemID string representation empty - did you run `go generate`?")
