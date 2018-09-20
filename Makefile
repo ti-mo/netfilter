@@ -23,9 +23,11 @@ testv:
 .PHONY: integration
 integration:
 ifeq ($(shell id -u),0)
+	modprobe -a nf_conntrack_ipv4 nf_conntrack_ipv6
 	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration ./...
 else
 	$(info Running integration tests under sudo..)
+	sudo modprobe -a nf_conntrack_ipv4 nf_conntrack_ipv6
 	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration -exec sudo ./...
 endif
 
