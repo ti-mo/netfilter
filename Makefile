@@ -20,14 +20,20 @@ test:
 testv:
 	go test -v -race ./...
 
-.PHONY: integration
-integration:
+.PHONY: modprobe
+modprobe:
 ifeq ($(shell id -u),0)
 	modprobe -a nf_conntrack_ipv4 nf_conntrack_ipv6
+else
+	sudo modprobe -a nf_conntrack_ipv4 nf_conntrack_ipv6
+endif
+
+.PHONY: integration
+integration: modprobe
+ifeq ($(shell id -u),0)
 	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration ./...
 else
 	$(info Running integration tests under sudo..)
-	sudo modprobe -a nf_conntrack_ipv4 nf_conntrack_ipv6
 	go test -v -race -coverprofile=cover-int.out -covermode=atomic -tags=integration -exec sudo ./...
 endif
 
@@ -37,7 +43,11 @@ coverhtml-integration: integration
 
 .PHONY: bench
 bench:
-	go test ./... -bench=.
+	go test -bench=. ./...
+
+.PHONY: bench-integration
+bench-integration: modprobe
+	go test -bench=. -tags=integration -exec sudo ./...
 
 cover: cover.out
 cover.out: $(SOURCES)
