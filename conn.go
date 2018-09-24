@@ -1,8 +1,9 @@
 package netfilter
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
@@ -40,7 +41,9 @@ func (c *Conn) Close() error {
 }
 
 // Query sends a Netfilter message over Netlink and validates the response.
-// The call will fail if the Conn is marked as Multicast.
+// The call will fail if the Conn is marked as Multicast. Any errors returned
+// from the underlying Netlink layer are wrapped using pkg/errors.Wrap(). Use
+// errors.Cause() to unwrap to compare to Errno.
 func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 
 	c.mu.RLock()
@@ -52,7 +55,7 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 
 	ret, err := c.conn.Execute(nlm)
 	if err != nil {
-		return nil, fmt.Errorf(errNetlinkExecute, err)
+		return nil, errors.Wrap(err, errWrapNetlinkExecute)
 	}
 
 	return ret, nil

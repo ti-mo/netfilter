@@ -64,12 +64,12 @@ func TestConnQuery(t *testing.T) {
 	}
 
 	_, got := connErr.Query(nlMsgReqAck)
-	if want := fmt.Sprintf(errNetlinkExecute, errNetlinkTest); want != got.Error() {
+	if want := fmt.Sprintf("%s: %s", errWrapNetlinkExecute, errNetlinkTest); want != got.Error() {
 		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
 	}
 
 	_, got = connErrMsg.Query(nlMsgReqAck)
-	if want := fmt.Sprintf(errNetlinkExecute, "errno -1"); want != got.Error() {
+	if want := fmt.Sprintf("%s: %s", errWrapNetlinkExecute, "errno -1"); want != got.Error() {
 		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
 	}
 }

@@ -7,7 +7,7 @@ import (
 const (
 	errWrapNetlinkUnmarshalAttrs = "error unmarshaling netlink attributes"
 
-	errNetlinkExecute = "error executing Netlink query: %s"
+	errWrapNetlinkExecute = "error executing Netlink query"
 )
 
 var (
