@@ -19,7 +19,6 @@ const (
 )
 
 // ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
-//go:generate stringer -type=ProtoFamily
 type ProtoFamily uint8
 
 // anonymous enum in uapi/linux/netfilter.h

@@ -9,7 +9,6 @@ import (
 
 // SubsystemID denotes the Netfilter Subsystem ID the message is for. It is a const that
 // is defined in the kernel at uapi/linux/netfilter/nfnetlink.h.
-//go:generate stringer -type=SubsystemID
 type SubsystemID uint8
 
 // MessageType denotes the message type specific to the subsystem. Its meaning can only
