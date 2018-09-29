@@ -1,10 +1,10 @@
 package netfilter
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/mdlayher/netlink"
-	"github.com/mdlayher/netlink/nlenc"
 )
 
 // SubsystemID denotes the Netfilter Subsystem ID the message is for. It is a const that
@@ -69,7 +69,7 @@ func (h *Header) unmarshal(nlm netlink.Message) error {
 
 	h.Family = ProtoFamily(nlm.Data[0])
 	h.Version = nlm.Data[1]
-	h.ResourceID = nlenc.Uint16(nlm.Data[2:4])
+	h.ResourceID = binary.BigEndian.Uint16(nlm.Data[2:4])
 
 	return nil
 }
@@ -88,7 +88,7 @@ func (h Header) marshal(nlm *netlink.Message) error {
 
 	nlm.Data[0] = uint8(h.Family)
 	nlm.Data[1] = h.Version
-	nlenc.PutUint16(nlm.Data[2:4], h.ResourceID)
+	copy(nlm.Data[2:4], Uint16Bytes(h.ResourceID))
 
 	return nil
 }

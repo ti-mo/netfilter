@@ -19,7 +19,7 @@ func TestHeaderMarshalTwoWay(t *testing.T) {
 		ResourceID: 2,
 	}
 
-	refMsg := netlink.Message{Header: netlink.Header{Type: 0x087B}, Data: []byte{255, 1, 2, 0}}
+	refMsg := netlink.Message{Header: netlink.Header{Type: 0x087B}, Data: []byte{255, 1, 0, 2}}
 
 	var gotHdr Header
 	gotMsg := netlink.Message{Data: make([]byte, 4)}

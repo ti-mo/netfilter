@@ -105,7 +105,7 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 					Type:  0x067b, // IPSET | 123
 					Flags: 0x100,  // Root
 				},
-				Data: []byte{7, 2, 3, 0, 20, 0, 0, 0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
+				Data: []byte{7, 2, 0, 3, 20, 0, 0, 0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
 			},
 		},
 		{
