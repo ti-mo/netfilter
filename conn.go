@@ -65,6 +65,10 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 // Marks the Conn as Multicast, meaning it can no longer be used for any queries.
 func (c *Conn) JoinGroups(groups []NetlinkGroup) error {
 
+	if len(groups) == 0 {
+		return errNoMulticastGroups
+	}
+
 	// Write lock
 	c.mu.Lock()
 	defer c.mu.Unlock()

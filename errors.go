@@ -18,4 +18,6 @@ var (
 	errMessageLen = errors.New("expected at least 4 bytes in netlink message payload")
 
 	errConnIsMulticast = errors.New("Conn is attached to one or more multicast groups and can no longer be used for bidirectional traffic")
+
+	errNoMulticastGroups = errors.New("need one or more multicast groups to join")
 )

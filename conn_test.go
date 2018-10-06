@@ -85,6 +85,8 @@ func TestConnQueryMulticast(t *testing.T) {
 	if want, got := errConnIsMulticast, err; want != got {
 		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
 	}
+
+	assert.EqualError(t, connMulticast.JoinGroups(nil), errNoMulticastGroups.Error())
 }
 
 func TestConnReceive(t *testing.T) {
