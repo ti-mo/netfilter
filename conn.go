@@ -117,3 +117,8 @@ func (c *Conn) IsMulticast() bool {
 
 	return c.isMulticast
 }
+
+// SetOption enables or disables a netlink socket option for the Conn.
+func (c *Conn) SetOption(option netlink.ConnOption, enable bool) error {
+	return c.conn.SetOption(option, enable)
+}
