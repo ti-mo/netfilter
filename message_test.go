@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/mdlayher/netlink"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mdlayher/netlink"
 )
 
 func TestMessageUnmarshalNetlink(t *testing.T) {
@@ -54,7 +55,7 @@ func TestMessageUnmarshalNetlink(t *testing.T) {
 			// Extract and parse Netfilter attributes from a Netlink message
 			h, attrs, err := UnmarshalNetlink(tt.msg)
 			if err != nil {
-				assert.Equal(t, tt.err.Error(), err.Error())
+				assert.EqualError(t, err, tt.err.Error())
 				// Don't test payload when expecting errors
 				return
 			}
@@ -87,7 +88,7 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 				ResourceID:  3,
 				SubsystemID: NFSubsysIPSet,
 				MessageType: 123,
-				Flags:       netlink.HeaderFlagsRoot,
+				Flags:       netlink.Root,
 			},
 			attrs: []Attribute{
 				{

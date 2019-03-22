@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAttributeScalarPanicEmpty(t *testing.T) {
@@ -113,11 +113,7 @@ func TestAttributeString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.attr.String()
-
-			if want := tt.txt; want != got {
-				t.Fatalf("unexpected string:\n- want: %v\n-  got: %v", want, got)
-			}
+			assert.Equal(t, tt.txt, tt.attr.String())
 		})
 	}
 }
@@ -199,16 +195,10 @@ func TestAttributeMarshalErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := marshalAttributes(tt.attrs)
-
-			if err == nil {
-				t.Fatal("marshal did not error")
-			}
+			require.Error(t, err, "marshal must error")
 
 			if tt.err != nil {
-				if want, got := tt.err, err; want != got {
-					t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
-						want, got.Error())
-				}
+				assert.EqualError(t, err, tt.err.Error(), "errors must match when error is expected")
 			} else if tt.errWrap != "" {
 				if !strings.HasPrefix(err.Error(), tt.errWrap+":") {
 					t.Fatalf("unexpected wrapped error:\n- expected prefix: %v\n-    error string: %v",
@@ -401,25 +391,17 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 
 			// Unmarshal binary content into nested structures
 			attrs, err := unmarshalAttributes(tt.b)
-			if err != nil {
-				t.Fatalf("unexpected unmarshal error: %v", err)
-			}
+			require.NoError(t, err)
 
-			if diff := cmp.Diff(tt.attrs, attrs); diff != "" {
-				t.Fatalf("unexpected unmarshal (-want +got):\n%s", diff)
-			}
+			assert.Empty(t, cmp.Diff(tt.attrs, attrs))
 
 			var b []byte
 
 			// Attempt re-marshal into binary form
 			b, err = marshalAttributes(tt.attrs)
-			if err != nil {
-				t.Fatalf("unexpected marshal error: %v", err)
-			}
+			require.NoError(t, err)
 
-			if diff := cmp.Diff(tt.b, b); diff != "" {
-				t.Fatalf("unexpected marshal (-want +got):\n%s", diff)
-			}
+			assert.Empty(t, cmp.Diff(tt.b, b))
 		})
 	}
 }

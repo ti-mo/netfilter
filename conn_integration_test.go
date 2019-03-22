@@ -35,10 +35,10 @@ func TestConnIntegrationBadGroups(t *testing.T) {
 	require.NoError(t, err, "opening Conn")
 
 	err = c.JoinGroups(badGroup)
-	require.EqualError(t, err, "invalid argument")
+	require.EqualError(t, err, "netlink join-group: setsockopt: invalid argument")
 
 	err = c.LeaveGroups(badGroup)
-	require.EqualError(t, err, "invalid argument")
+	require.EqualError(t, err, "netlink leave-group: setsockopt: invalid argument")
 
 	err = c.Close()
 	require.NoError(t, err, "closing Conn")

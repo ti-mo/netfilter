@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/mdlayher/netlink"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mdlayher/netlink"
 )
 
 func TestHeaderMarshalTwoWay(t *testing.T) {
@@ -51,9 +52,7 @@ func TestHeaderString(t *testing.T) {
 
 	want := "<Subsystem: NFSubsysIPSet, Message Type: 123, Family: ProtoUnspec, Version: 0, ResourceID: 0>"
 
-	if got := ht.String(); want != got {
-		t.Fatalf("unexpected string:\n- want: %s\n-  got: %s", want, got)
-	}
+	assert.Equal(t, want, ht.String())
 }
 
 func TestProtoFamilyString(t *testing.T) {

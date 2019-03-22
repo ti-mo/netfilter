@@ -55,7 +55,7 @@ func (c *Conn) Query(nlm netlink.Message) ([]netlink.Message, error) {
 
 	ret, err := c.conn.Execute(nlm)
 	if err != nil {
-		return nil, errors.Wrap(err, errWrapNetlinkExecute)
+		return nil, errors.Wrap(err, "netfilter query")
 	}
 
 	return ret, nil

@@ -1,23 +1,23 @@
 package netfilter
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mdlayher/netlink"
 	"github.com/mdlayher/netlink/nltest"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
-	errNetlinkTest = errors.New("synthetic test error")
+	errNetlinkTest = "synthetic test error"
 
 	nlMsgReqAck = netlink.Message{
 		Header: netlink.Header{
-			Flags: netlink.HeaderFlagsRequest | netlink.HeaderFlagsAcknowledge,
+			Flags: netlink.Request | netlink.Acknowledge,
 		},
 	}
 
@@ -27,14 +27,14 @@ var (
 	connEcho   = Conn{conn: nlConnEcho}
 
 	// Connection that returns error on any send.
-	nlConnError = nltest.Dial(func(req []netlink.Message) ([]netlink.Message, error) { return nil, errNetlinkTest })
+	nlConnError = nltest.Dial(func(req []netlink.Message) ([]netlink.Message, error) { return nil, errors.New(errNetlinkTest) })
 	connErr     = Conn{conn: nlConnError}
 
 	// Connection that returns a single message with a nlMsgErr that trips the netlink payload error check.
 	nlConnMsgError = nltest.Dial(func(req []netlink.Message) ([]netlink.Message, error) {
 		resp := []netlink.Message{
 			{
-				Header: netlink.Header{Type: netlink.HeaderTypeError},
+				Header: netlink.Header{Type: netlink.Error},
 				Data:   []byte{1, 0, 0, 0},
 			},
 		}
@@ -59,25 +59,24 @@ func TestConnDialClose(t *testing.T) {
 func TestConnDialError(t *testing.T) {
 
 	_, err := Dial(&netlink.Config{NetNS: 1337})
-	assert.EqualError(t, err, "bad file descriptor")
+	assert.EqualError(t, err, "setns: bad file descriptor")
 }
 
 func TestConnQuery(t *testing.T) {
 
-	// Expect no-op query to be successful
-	if _, err := connEcho.Query(nlMsgReqAck); err != nil {
-		t.Fatalf("error from Query: %v", err)
-	}
+	// Expect no-op query to be successful.
+	_, err := connEcho.Query(nlMsgReqAck)
+	assert.NoError(t, err, "query error")
 
-	_, got := connErr.Query(nlMsgReqAck)
-	if want := fmt.Sprintf("%s: %s", errWrapNetlinkExecute, errNetlinkTest); want != got.Error() {
-		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
-	}
+	_, err = connErr.Query(nlMsgReqAck)
+	opErr, ok := errors.Cause(err).(*netlink.OpError)
+	require.True(t, ok)
+	assert.EqualError(t, opErr, "netlink receive: "+errNetlinkTest)
 
-	_, got = connErrMsg.Query(nlMsgReqAck)
-	if want := fmt.Sprintf("%s: %s", errWrapNetlinkExecute, "errno -1"); want != got.Error() {
-		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
-	}
+	_, err = connErrMsg.Query(nlMsgReqAck)
+	opErr, ok = errors.Cause(err).(*netlink.OpError)
+	require.True(t, ok)
+	assert.EqualError(t, opErr, "netlink receive: errno -1")
 }
 
 func TestConnQueryMulticast(t *testing.T) {
@@ -88,11 +87,10 @@ func TestConnQueryMulticast(t *testing.T) {
 	assert.Equal(t, connMulticast.IsMulticast(), true)
 
 	_, err := connMulticast.Query(nlMsgReqAck)
-	if want, got := errConnIsMulticast, err; want != got {
-		t.Fatalf("unexpected error:\n-  want: %v\n-   got: %v", want, got)
-	}
+	assert.EqualError(t, err, errConnIsMulticast.Error())
 
-	assert.EqualError(t, connMulticast.JoinGroups(nil), errNoMulticastGroups.Error())
+	err = connMulticast.JoinGroups(nil)
+	assert.EqualError(t, err, errNoMulticastGroups.Error())
 }
 
 func TestConnReceive(t *testing.T) {
