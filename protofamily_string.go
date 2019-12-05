@@ -4,6 +4,20 @@ package netfilter
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[ProtoUnspec-0]
+	_ = x[ProtoInet-1]
+	_ = x[ProtoIPv4-2]
+	_ = x[ProtoARP-3]
+	_ = x[ProtoNetDev-5]
+	_ = x[ProtoBridge-7]
+	_ = x[ProtoIPv6-10]
+	_ = x[ProtoDECNet-12]
+}
+
 const (
 	_ProtoFamily_name_0 = "ProtoUnspecProtoInetProtoIPv4ProtoARP"
 	_ProtoFamily_name_1 = "ProtoNetDev"
