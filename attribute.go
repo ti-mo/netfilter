@@ -141,7 +141,6 @@ func Uint64Bytes(u uint64) []byte {
 // obtained by exhausting ad.
 func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
 
-	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting.
 	for ad.Next() {
 
 		// Copy the netlink attribute's fields into the netfilter attribute.
@@ -153,8 +152,8 @@ func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
 		}
 
 		// Boolean flags extracted from the two leftmost bits of Type.
-		nfa.Nested = (ad.TypeFlags() & netlink.Nested) != 0
-		nfa.NetByteOrder = (ad.TypeFlags() & netlink.NetByteOrder) != 0
+		nfa.Nested = ad.TypeFlags()&netlink.Nested != 0
+		nfa.NetByteOrder = ad.TypeFlags()&netlink.NetByteOrder != 0
 
 		if nfa.NetByteOrder && nfa.Nested {
 			return errInvalidAttributeFlags
@@ -168,7 +167,7 @@ func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
 		a.Children = append(a.Children, nfa)
 	}
 
-	return nil
+	return ad.Err()
 }
 
 // encode returns a function that takes an AttributeEncoder and returns error.
@@ -184,15 +183,15 @@ func (a *Attribute) encode(attrs []Attribute) func(*netlink.AttributeEncoder) er
 				return errInvalidAttributeFlags
 			}
 
-			if nfa.NetByteOrder {
-				nfa.Type |= netlink.NetByteOrder
-			}
-
 			if nfa.Nested {
 				ae.Nested(nfa.Type, nfa.encode(nfa.Children))
 				continue
 			}
 
+			// Manually set the NetByteOrder flag, since ae.Bytes() can't.
+			if nfa.NetByteOrder {
+				nfa.Type |= netlink.NetByteOrder
+			}
 			ae.Bytes(nfa.Type, nfa.Data)
 		}
 
@@ -223,11 +222,6 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 
 	// Catch any errors encountered parsing netfilter structures.
 	if err := a.decode(ad); err != nil {
-		return nil, err
-	}
-
-	// Catch any errors encountered by the netlink decoder.
-	if err := ad.Err(); err != nil {
 		return nil, err
 	}
 
