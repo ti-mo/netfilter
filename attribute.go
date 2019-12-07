@@ -171,6 +171,35 @@ func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
 	return nil
 }
 
+// encode returns a function that takes an AttributeEncoder and returns error.
+// This function can be passed to AttributeEncoder.Nested for recursively
+// encoding Attributes.
+func (a *Attribute) encode(attrs []Attribute) func(*netlink.AttributeEncoder) error {
+
+	return func(ae *netlink.AttributeEncoder) error {
+
+		for _, nfa := range attrs {
+
+			if nfa.NetByteOrder && nfa.Nested {
+				return errInvalidAttributeFlags
+			}
+
+			if nfa.NetByteOrder {
+				nfa.Type |= netlink.NetByteOrder
+			}
+
+			if nfa.Nested {
+				ae.Nested(nfa.Type, nfa.encode(nfa.Children))
+				continue
+			}
+
+			ae.Bytes(nfa.Type, nfa.Data)
+		}
+
+		return nil
+	}
+}
+
 // unmarshalAttributes returns an array of netfilter.Attributes decoded from
 // a byte array. This byte array should be taken from the netlink.Message's
 // Data payload after the nfHeaderLen offset.
@@ -210,45 +239,17 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 // the nfHeaderLen offset.
 func marshalAttributes(attrs []Attribute) ([]byte, error) {
 
-	// netlink.Attribute to use as scratch buffer minimize allocations.
-	nla := netlink.Attribute{}
+	ae := netlink.NewAttributeEncoder()
 
-	// Output array, initialized to the length of the input array
-	ra := make([]netlink.Attribute, 0, len(attrs))
-
-	for _, nfa := range attrs {
-
-		if nfa.NetByteOrder && nfa.Nested {
-			return nil, errInvalidAttributeFlags
-		}
-
-		// Save nested or byte order flags back to the netlink.Attribute's
-		// Type field to include it in the marshaling operation
-		nla.Type = nfa.Type
-
-		// Embed the Nested and NetByteOrder flags into the netlink Type.
-		switch {
-		case nfa.Nested:
-			nla.Type |= netlink.Nested
-		case nfa.NetByteOrder:
-			nla.Type |= netlink.NetByteOrder
-		}
-
-		// Recursively marshal the attribute's children.
-		if nfa.Nested {
-			nfnab, err := marshalAttributes(nfa.Children)
-			if err != nil {
-				return nil, err
-			}
-
-			nla.Data = nfnab
-		} else {
-			nla.Data = nfa.Data
-		}
-
-		ra = append(ra, nla)
+	attr := Attribute{}
+	if err := attr.encode(attrs)(ae); err != nil {
+		return nil, err
 	}
 
-	// Marshal all Netfilter attributes into binary representation of Netlink attributes
-	return netlink.MarshalAttributes(ra)
+	b, err := ae.Encode()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
