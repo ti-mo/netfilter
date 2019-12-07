@@ -6,7 +6,6 @@ import (
 
 	"github.com/mdlayher/netlink"
 	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
 
 // An Attribute is a copy of a netlink.Attribute that can be nested.
@@ -138,6 +137,40 @@ func Uint64Bytes(u uint64) []byte {
 	return d
 }
 
+// decode fills the Attribute's Children field with Attributes
+// obtained by exhausting ad.
+func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
+
+	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting.
+	for ad.Next() {
+
+		// Copy the netlink attribute's fields into the netfilter attribute.
+		nfa := Attribute{
+			// Only consider the rightmost 14 bits for Type.
+			// ad.Type implicitly masks the Nested and NetByteOrder bits.
+			Type: ad.Type(),
+			Data: ad.Bytes(),
+		}
+
+		// Boolean flags extracted from the two leftmost bits of Type.
+		nfa.Nested = (ad.TypeFlags() & netlink.Nested) != 0
+		nfa.NetByteOrder = (ad.TypeFlags() & netlink.NetByteOrder) != 0
+
+		if nfa.NetByteOrder && nfa.Nested {
+			return errInvalidAttributeFlags
+		}
+
+		// Unmarshal recursively if the netlink Nested flag is set.
+		if nfa.Nested {
+			ad.Nested(nfa.decode)
+		}
+
+		a.Children = append(a.Children, nfa)
+	}
+
+	return nil
+}
+
 // unmarshalAttributes returns an array of netfilter.Attributes decoded from
 // a byte array. This byte array should be taken from the netlink.Message's
 // Data payload after the nfHeaderLen offset.
@@ -145,47 +178,31 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 
 	// Obtain a list of parsed netlink attributes possibly holding
 	// nested Netfilter attributes in their binary Data field.
-	attrs, err := netlink.UnmarshalAttributes(b)
+	ad, err := netlink.NewAttributeDecoder(b)
 	if err != nil {
 		return nil, errors.Wrap(err, errWrapNetlinkUnmarshalAttrs)
 	}
 
-	var ra []Attribute
+	// Use the Children element of the Attribute to decode into.
+	// Attribute already has nested decoding implemented on the type.
+	var a Attribute
 
-	// Only allocate backing array when there are netlink attributes to decode.
-	if len(attrs) != 0 {
-		ra = make([]Attribute, 0, len(attrs))
+	// Pre-allocate backing array when there are netlink attributes to decode.
+	if ad.Len() != 0 {
+		a.Children = make([]Attribute, 0, ad.Len())
 	}
 
-	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting
-	for _, nla := range attrs {
-
-		// Copy the netlink attribute's fields into the netfilter attribute.
-		nfa := Attribute{
-			// Only consider the rightmost 14 bits for Type
-			Type: nla.Type & ^(uint16(unix.NLA_F_NESTED) | uint16(unix.NLA_F_NET_BYTEORDER)),
-			Data: nla.Data,
-		}
-
-		// Boolean flags extracted from the two leftmost bits of Type
-		nfa.Nested = (nla.Type & uint16(unix.NLA_F_NESTED)) != 0
-		nfa.NetByteOrder = (nla.Type & uint16(unix.NLA_F_NET_BYTEORDER)) != 0
-
-		if nfa.NetByteOrder && nfa.Nested {
-			return nil, errInvalidAttributeFlags
-		}
-
-		// Unmarshal recursively if the netlink Nested flag is set
-		if nfa.Nested {
-			if nfa.Children, err = unmarshalAttributes(nla.Data); err != nil {
-				return nil, err
-			}
-		}
-
-		ra = append(ra, nfa)
+	// Catch any errors encountered parsing netfilter structures.
+	if err := a.decode(ad); err != nil {
+		return nil, err
 	}
 
-	return ra, nil
+	// Catch any errors encountered by the netlink decoder.
+	if err := ad.Err(); err != nil {
+		return nil, err
+	}
+
+	return a.Children, nil
 }
 
 // marshalAttributes marshals a nested attribute structure into a byte slice.
@@ -193,7 +210,7 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 // the nfHeaderLen offset.
 func marshalAttributes(attrs []Attribute) ([]byte, error) {
 
-	// netlink.Attribute to use as scratch buffer, requires a single allocation
+	// netlink.Attribute to use as scratch buffer minimize allocations.
 	nla := netlink.Attribute{}
 
 	// Output array, initialized to the length of the input array
@@ -209,14 +226,15 @@ func marshalAttributes(attrs []Attribute) ([]byte, error) {
 		// Type field to include it in the marshaling operation
 		nla.Type = nfa.Type
 
+		// Embed the Nested and NetByteOrder flags into the netlink Type.
 		switch {
 		case nfa.Nested:
-			nla.Type = nla.Type | unix.NLA_F_NESTED
+			nla.Type |= netlink.Nested
 		case nfa.NetByteOrder:
-			nla.Type = nla.Type | unix.NLA_F_NET_BYTEORDER
+			nla.Type |= netlink.NetByteOrder
 		}
 
-		// Recursively marshal the attribute's children
+		// Recursively marshal the attribute's children.
 		if nfa.Nested {
 			nfnab, err := marshalAttributes(nfa.Children)
 			if err != nil {

@@ -222,6 +222,14 @@ func TestAttributeUnmarshalErrors(t *testing.T) {
 			errWrap: errWrapNetlinkUnmarshalAttrs,
 		},
 		{
+			name: "invalid attribute flags on top-level attribute",
+			b: []byte{
+				8, 0, 0, 192, // 192 = nested + netByteOrder
+				0, 0, 0, 0,
+			},
+			err: errInvalidAttributeFlags,
+		},
+		{
 			name: "invalid attribute flags on nested attribute",
 			b: []byte{
 				12, 0, 0, 128,
