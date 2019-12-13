@@ -96,7 +96,7 @@ func TestConnQueryMulticast(t *testing.T) {
 func TestConnReceive(t *testing.T) {
 
 	// Inject a message directly into the nltest connection
-	connEcho.conn.Send(nlMsgReqAck)
+	_, _ = connEcho.conn.Send(nlMsgReqAck)
 
 	// Drain the socket
 	_, err := connEcho.Receive()
