@@ -20,6 +20,25 @@ func UnmarshalNetlink(msg netlink.Message) (Header, []Attribute, error) {
 	return h, attrs, nil
 }
 
+// DecodeNetlink returns msg's Netfilter header and an AttributeDecoder that can be used
+// to iteratively decode all Netlink attributes contained in the message.
+func DecodeNetlink(msg netlink.Message) (Header, *netlink.AttributeDecoder, error) {
+
+	var h Header
+
+	err := h.unmarshal(msg)
+	if err != nil {
+		return Header{}, nil, err
+	}
+
+	ad, err := netlink.NewAttributeDecoder(msg.Data[nfHeaderLen:])
+	if err != nil {
+		return Header{}, nil, err
+	}
+
+	return h, ad, nil
+}
+
 // MarshalNetlink takes a Netfilter Header and Attributes and returns a netlink.Message.
 func MarshalNetlink(h Header, attrs []Attribute) (netlink.Message, error) {
 
@@ -32,7 +51,7 @@ func MarshalNetlink(h Header, attrs []Attribute) (netlink.Message, error) {
 	nlm := netlink.Message{Data: make([]byte, 4)}
 
 	// marshal error ignored, safe to do if msg Data is initialized
-	h.marshal(&nlm)
+	_ = h.marshal(&nlm)
 
 	nlm.Data = append(nlm.Data, ba...)
 
