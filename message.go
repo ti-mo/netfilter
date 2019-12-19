@@ -14,7 +14,7 @@ func UnmarshalNetlink(msg netlink.Message) (Header, []Attribute, error) {
 		return Header{}, nil, err
 	}
 
-	attrs, err := unmarshalAttributes(ad)
+	attrs, err := decodeAttributes(ad)
 	if err != nil {
 		return Header{}, nil, err
 	}
@@ -44,18 +44,33 @@ func DecodeNetlink(msg netlink.Message) (Header, *netlink.AttributeDecoder, erro
 // MarshalNetlink takes a Netfilter Header and Attributes and returns a netlink.Message.
 func MarshalNetlink(h Header, attrs []Attribute) (netlink.Message, error) {
 
-	ba, err := MarshalAttributes(attrs)
+	ae := NewAttributeEncoder()
+	if err := encodeAttributes(ae, attrs); err != nil {
+		return netlink.Message{}, err
+	}
+
+	return EncodeNetlink(h, ae)
+}
+
+// EncodeNetlink generates a netlink.Message based on a given netfilter header h
+// and a pre-filled netlink.AttributeEncoder ae.
+func EncodeNetlink(h Header, ae *netlink.AttributeEncoder) (netlink.Message, error) {
+
+	if ae == nil {
+		return netlink.Message{}, errNilAttributeEncoder
+	}
+
+	// Encode the AE into a byte slice.
+	b, err := ae.Encode()
 	if err != nil {
 		return netlink.Message{}, err
 	}
 
-	// initialize with 4 bytes of Data before unmarshal
-	nlm := netlink.Message{Data: make([]byte, 4)}
+	// Allocate space for the marshaled netfilter header.
+	nlm := netlink.Message{Data: append(make([]byte, nfHeaderLen), b...)}
 
-	// marshal error ignored, safe to do if msg Data is initialized
+	// marshal error ignored, safe to do if msg Data is initialized.
 	_ = h.marshal(&nlm)
-
-	nlm.Data = append(nlm.Data, ba...)
 
 	return nlm, nil
 }

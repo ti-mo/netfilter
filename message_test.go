@@ -155,3 +155,15 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeNetlink(t *testing.T) {
+
+	_, err := EncodeNetlink(Header{}, nil)
+	assert.EqualError(t, err, errNilAttributeEncoder.Error())
+
+	// Make ae.Encode() throw an error inside EncodeNetlink.
+	ae := NewAttributeEncoder()
+	ae.Do(0, func() ([]byte, error) { return []byte{}, errors.New("test error") })
+	_, err = EncodeNetlink(Header{}, ae)
+	assert.EqualError(t, err, "test error")
+}

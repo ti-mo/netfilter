@@ -223,10 +223,10 @@ func (a *Attribute) encode(attrs []Attribute) func(*netlink.AttributeEncoder) er
 	}
 }
 
-// unmarshalAttributes returns an array of netfilter.Attributes decoded from
+// decodeAttributes returns an array of netfilter.Attributes decoded from
 // a byte array. This byte array should be taken from the netlink.Message's
 // Data payload after the nfHeaderLen offset.
-func unmarshalAttributes(ad *netlink.AttributeDecoder) ([]Attribute, error) {
+func decodeAttributes(ad *netlink.AttributeDecoder) ([]Attribute, error) {
 
 	// Use the Children element of the Attribute to decode into.
 	// Attribute already has nested decoding implemented on the type.
@@ -245,6 +245,17 @@ func unmarshalAttributes(ad *netlink.AttributeDecoder) ([]Attribute, error) {
 	return a.Children, nil
 }
 
+// encodeAttributes encodes a list of Attributes into the given netlink.AttributeEncoder.
+func encodeAttributes(ae *netlink.AttributeEncoder, attrs []Attribute) error {
+
+	if ae == nil {
+		return errNilAttributeEncoder
+	}
+
+	attr := Attribute{}
+	return attr.encode(attrs)(ae)
+}
+
 // MarshalAttributes marshals a nested attribute structure into a byte slice.
 // This byte slice can then be copied into a netlink.Message's Data field after
 // the nfHeaderLen offset.
@@ -252,8 +263,7 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
 	ae := NewAttributeEncoder()
 
-	attr := Attribute{}
-	if err := attr.encode(attrs)(ae); err != nil {
+	if err := encodeAttributes(ae, attrs); err != nil {
 		return nil, err
 	}
 
@@ -263,4 +273,15 @@ func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// UnmarshalAttributes unmarshals a byte slice into a list of Attributes.
+func UnmarshalAttributes(b []byte) ([]Attribute, error) {
+
+	ad, err := NewAttributeDecoder(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeAttributes(ad)
 }
