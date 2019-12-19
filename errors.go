@@ -4,10 +4,6 @@ import (
 	"errors"
 )
 
-const (
-	errWrapNetlinkUnmarshalAttrs = "error unmarshaling netlink attributes"
-)
-
 var (
 	// errInvalidAttributeFlags specifies if an Attribute's flag configuration is invalid.
 	// From a comment in Linux/include/uapi/linux/netlink.h, Nested and NetByteOrder are mutually exclusive.

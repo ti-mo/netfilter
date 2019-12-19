@@ -5,8 +5,32 @@ import (
 	"fmt"
 
 	"github.com/mdlayher/netlink"
-	"github.com/pkg/errors"
 )
+
+// NewAttributeDecoder instantiates a new netlink.AttributeDecoder
+// configured with a Big Endian byte order.
+func NewAttributeDecoder(b []byte) (*netlink.AttributeDecoder, error) {
+	ad, err := netlink.NewAttributeDecoder(b)
+	if err != nil {
+		return nil, err
+	}
+
+	// All Netfilter attribute payloads are big-endian. (network byte order)
+	ad.ByteOrder = binary.BigEndian
+
+	return ad, nil
+}
+
+// NewAttributeDecoder instantiates a new netlink.AttributeEncoder
+// configured with a Big Endian byte order.
+func NewAttributeEncoder() *netlink.AttributeEncoder {
+	ae := netlink.NewAttributeEncoder()
+
+	// All Netfilter attribute payloads are big-endian. (network byte order)
+	ae.ByteOrder = binary.BigEndian
+
+	return ae
+}
 
 // An Attribute is a copy of a netlink.Attribute that can be nested.
 type Attribute struct {
@@ -202,14 +226,7 @@ func (a *Attribute) encode(attrs []Attribute) func(*netlink.AttributeEncoder) er
 // unmarshalAttributes returns an array of netfilter.Attributes decoded from
 // a byte array. This byte array should be taken from the netlink.Message's
 // Data payload after the nfHeaderLen offset.
-func unmarshalAttributes(b []byte) ([]Attribute, error) {
-
-	// Obtain a list of parsed netlink attributes possibly holding
-	// nested Netfilter attributes in their binary Data field.
-	ad, err := netlink.NewAttributeDecoder(b)
-	if err != nil {
-		return nil, errors.Wrap(err, errWrapNetlinkUnmarshalAttrs)
-	}
+func unmarshalAttributes(ad *netlink.AttributeDecoder) ([]Attribute, error) {
 
 	// Use the Children element of the Attribute to decode into.
 	// Attribute already has nested decoding implemented on the type.
@@ -228,12 +245,12 @@ func unmarshalAttributes(b []byte) ([]Attribute, error) {
 	return a.Children, nil
 }
 
-// marshalAttributes marshals a nested attribute structure into a byte slice.
+// MarshalAttributes marshals a nested attribute structure into a byte slice.
 // This byte slice can then be copied into a netlink.Message's Data field after
 // the nfHeaderLen offset.
-func marshalAttributes(attrs []Attribute) ([]byte, error) {
+func MarshalAttributes(attrs []Attribute) ([]byte, error) {
 
-	ae := netlink.NewAttributeEncoder()
+	ae := NewAttributeEncoder()
 
 	attr := Attribute{}
 	if err := attr.encode(attrs)(ae); err != nil {

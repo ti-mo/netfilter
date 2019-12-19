@@ -1,18 +1,20 @@
 package netfilter
 
-import "github.com/mdlayher/netlink"
+import (
+	"github.com/pkg/errors"
+
+	"github.com/mdlayher/netlink"
+)
 
 // UnmarshalNetlink unmarshals a netlink.Message into a Netfilter Header and Attributes.
 func UnmarshalNetlink(msg netlink.Message) (Header, []Attribute, error) {
 
-	var h Header
-
-	err := h.unmarshal(msg)
+	h, ad, err := DecodeNetlink(msg)
 	if err != nil {
 		return Header{}, nil, err
 	}
 
-	attrs, err := unmarshalAttributes(msg.Data[nfHeaderLen:])
+	attrs, err := unmarshalAttributes(ad)
 	if err != nil {
 		return Header{}, nil, err
 	}
@@ -28,12 +30,12 @@ func DecodeNetlink(msg netlink.Message) (Header, *netlink.AttributeDecoder, erro
 
 	err := h.unmarshal(msg)
 	if err != nil {
-		return Header{}, nil, err
+		return Header{}, nil, errors.Wrap(err, "unmarshaling netfilter header")
 	}
 
-	ad, err := netlink.NewAttributeDecoder(msg.Data[nfHeaderLen:])
+	ad, err := NewAttributeDecoder(msg.Data[nfHeaderLen:])
 	if err != nil {
-		return Header{}, nil, err
+		return Header{}, nil, errors.Wrap(err, "creating attribute decoder")
 	}
 
 	return h, ad, nil
@@ -42,7 +44,7 @@ func DecodeNetlink(msg netlink.Message) (Header, *netlink.AttributeDecoder, erro
 // MarshalNetlink takes a Netfilter Header and Attributes and returns a netlink.Message.
 func MarshalNetlink(h Header, attrs []Attribute) (netlink.Message, error) {
 
-	ba, err := marshalAttributes(attrs)
+	ba, err := MarshalAttributes(attrs)
 	if err != nil {
 		return netlink.Message{}, err
 	}

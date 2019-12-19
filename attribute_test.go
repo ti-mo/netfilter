@@ -141,7 +141,7 @@ func TestAttributeMarshalAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			b, err := marshalAttributes(tt.attrs)
+			b, err := MarshalAttributes(tt.attrs)
 			if err != nil {
 				t.Fatalf("unexpected marshal error: %v", err)
 			}
@@ -194,7 +194,7 @@ func TestAttributeMarshalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := marshalAttributes(tt.attrs)
+			_, err := MarshalAttributes(tt.attrs)
 			require.Error(t, err, "marshal must error")
 
 			if tt.err != nil {
@@ -217,11 +217,6 @@ func TestAttributeUnmarshalErrors(t *testing.T) {
 		errWrap string
 	}{
 		{
-			name:    "netlink unmarshal error",
-			b:       []byte{1},
-			errWrap: errWrapNetlinkUnmarshalAttrs,
-		},
-		{
 			name: "invalid attribute flags on top-level attribute",
 			b: []byte{
 				8, 0, 0, 192, // 192 = nested + netByteOrder
@@ -242,8 +237,12 @@ func TestAttributeUnmarshalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := unmarshalAttributes(tt.b)
+			ad, err := NewAttributeDecoder(tt.b)
+			if err != nil {
+				t.Fatal("unexpected error creating AttributeDecoder:", err)
+			}
 
+			_, err = unmarshalAttributes(ad)
 			if err == nil {
 				t.Fatal("unmarshal did not error")
 			}
@@ -397,8 +396,13 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
+			ad, err := NewAttributeDecoder(tt.b)
+			if err != nil {
+				t.Fatal("unexpected error creating AttributeDecoder:", err)
+			}
+
 			// Unmarshal binary content into nested structures
-			attrs, err := unmarshalAttributes(tt.b)
+			attrs, err := unmarshalAttributes(ad)
 			require.NoError(t, err)
 
 			assert.Empty(t, cmp.Diff(tt.attrs, attrs))
@@ -406,7 +410,7 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 			var b []byte
 
 			// Attempt re-marshal into binary form
-			b, err = marshalAttributes(tt.attrs)
+			b, err = MarshalAttributes(tt.attrs)
 			require.NoError(t, err)
 
 			assert.Empty(t, cmp.Diff(tt.b, b))
