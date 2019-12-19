@@ -1,6 +1,7 @@
 package netfilter
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -141,7 +142,7 @@ func TestAttributeMarshalAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			b, err := marshalAttributes(tt.attrs)
+			b, err := MarshalAttributes(tt.attrs)
 			if err != nil {
 				t.Fatalf("unexpected marshal error: %v", err)
 			}
@@ -194,7 +195,7 @@ func TestAttributeMarshalErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := marshalAttributes(tt.attrs)
+			_, err := MarshalAttributes(tt.attrs)
 			require.Error(t, err, "marshal must error")
 
 			if tt.err != nil {
@@ -209,7 +210,7 @@ func TestAttributeMarshalErrors(t *testing.T) {
 	}
 }
 
-func TestAttributeUnmarshalErrors(t *testing.T) {
+func TestAttributeDecoderErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		b       []byte
@@ -217,9 +218,12 @@ func TestAttributeUnmarshalErrors(t *testing.T) {
 		errWrap string
 	}{
 		{
-			name:    "netlink unmarshal error",
-			b:       []byte{1},
-			errWrap: errWrapNetlinkUnmarshalAttrs,
+			name: "invalid attribute flags on top-level attribute",
+			b: []byte{
+				8, 0, 0, 192, // 192 = nested + netByteOrder
+				0, 0, 0, 0,
+			},
+			err: errInvalidAttributeFlags,
 		},
 		{
 			name: "invalid attribute flags on nested attribute",
@@ -230,27 +234,19 @@ func TestAttributeUnmarshalErrors(t *testing.T) {
 			},
 			err: errInvalidAttributeFlags,
 		},
+		{
+			name: "decoding invalid attribute",
+			b:    []byte{4, 0, 0},
+			err:  errors.New("invalid attribute; length too short or too large"),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := unmarshalAttributes(tt.b)
-
-			if err == nil {
-				t.Fatal("unmarshal did not error")
-			}
-
-			if tt.err != nil {
-				if want, got := tt.err, err; want != got {
-					t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
-						want, got.Error())
-				}
-			} else if tt.errWrap != "" {
-				if !strings.HasPrefix(err.Error(), tt.errWrap+":") {
-					t.Fatalf("unexpected wrapped error:\n- expected prefix: %v\n-    error string: %v",
-						tt.errWrap, err)
-				}
-			}
+			_, err := UnmarshalAttributes(tt.b)
+			require.Error(t, err)
+			require.Error(t, tt.err)
+			require.EqualError(t, err, tt.err.Error())
 		})
 	}
 }
@@ -389,8 +385,13 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
+			ad, err := NewAttributeDecoder(tt.b)
+			if err != nil {
+				t.Fatal("unexpected error creating AttributeDecoder:", err)
+			}
+
 			// Unmarshal binary content into nested structures
-			attrs, err := unmarshalAttributes(tt.b)
+			attrs, err := decodeAttributes(ad)
 			require.NoError(t, err)
 
 			assert.Empty(t, cmp.Diff(tt.attrs, attrs))
@@ -398,10 +399,14 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 			var b []byte
 
 			// Attempt re-marshal into binary form
-			b, err = marshalAttributes(tt.attrs)
+			b, err = MarshalAttributes(tt.attrs)
 			require.NoError(t, err)
 
 			assert.Empty(t, cmp.Diff(tt.b, b))
 		})
 	}
+}
+
+func TestErrors(t *testing.T) {
+	assert.EqualError(t, encodeAttributes(nil, nil), errNilAttributeEncoder.Error())
 }

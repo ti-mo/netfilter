@@ -1,13 +1,16 @@
 package netfilter
 
 import (
-	"errors"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/mdlayher/netlink"
+	"github.com/mdlayher/netlink/nlenc"
 )
 
 func TestMessageUnmarshalNetlink(t *testing.T) {
@@ -24,7 +27,7 @@ func TestMessageUnmarshalNetlink(t *testing.T) {
 			msg: netlink.Message{
 				Data: make([]byte, nfHeaderLen-1),
 			},
-			err: errMessageLen,
+			err: errors.Wrap(errMessageLen, "unmarshaling netfilter header"),
 		},
 		{
 			name: "simple attribute",
@@ -45,20 +48,35 @@ func TestMessageUnmarshalNetlink(t *testing.T) {
 			msg: netlink.Message{
 				Data: make([]byte, nfHeaderLen+1),
 			},
-			err: errors.New("error unmarshaling netlink attributes: invalid attribute; length too short or too large"),
+			err: errors.New("creating attribute decoder: invalid attribute; length too short or too large"),
+		},
+		{
+			name: "nested and byte order flags set",
+			msg: netlink.Message{
+				Data: append(
+					[]byte{
+						0, 0, 0, 0,
+						4, 0},
+					nlenc.Uint16Bytes(netlink.Nested|netlink.NetByteOrder)...,
+				),
+			},
+			err: errInvalidAttributeFlags,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			// Extract and parse Netfilter attributes from a Netlink message
+			// Extract and parse Netfilter attributes from a Netlink message.
 			h, attrs, err := UnmarshalNetlink(tt.msg)
-			if err != nil {
-				assert.EqualError(t, err, tt.err.Error())
-				// Don't test payload when expecting errors
+
+			if tt.err != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tt.err.Error())
 				return
 			}
+
+			require.NoError(t, err)
 
 			if diff := cmp.Diff(tt.attrs, attrs); diff != "" {
 				t.Fatalf("unexpected attributes (-want, +got):\n%s", diff)
@@ -136,4 +154,16 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEncodeNetlink(t *testing.T) {
+
+	_, err := EncodeNetlink(Header{}, nil)
+	assert.EqualError(t, err, errNilAttributeEncoder.Error())
+
+	// Make ae.Encode() throw an error inside EncodeNetlink.
+	ae := NewAttributeEncoder()
+	ae.Do(0, func() ([]byte, error) { return []byte{}, errors.New("test error") })
+	_, err = EncodeNetlink(Header{}, ae)
+	assert.EqualError(t, err, "test error")
 }

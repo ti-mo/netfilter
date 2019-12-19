@@ -5,9 +5,32 @@ import (
 	"fmt"
 
 	"github.com/mdlayher/netlink"
-	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 )
+
+// NewAttributeDecoder instantiates a new netlink.AttributeDecoder
+// configured with a Big Endian byte order.
+func NewAttributeDecoder(b []byte) (*netlink.AttributeDecoder, error) {
+	ad, err := netlink.NewAttributeDecoder(b)
+	if err != nil {
+		return nil, err
+	}
+
+	// All Netfilter attribute payloads are big-endian. (network byte order)
+	ad.ByteOrder = binary.BigEndian
+
+	return ad, nil
+}
+
+// NewAttributeDecoder instantiates a new netlink.AttributeEncoder
+// configured with a Big Endian byte order.
+func NewAttributeEncoder() *netlink.AttributeEncoder {
+	ae := netlink.NewAttributeEncoder()
+
+	// All Netfilter attribute payloads are big-endian. (network byte order)
+	ae.ByteOrder = binary.BigEndian
+
+	return ae
+}
 
 // An Attribute is a copy of a netlink.Attribute that can be nested.
 type Attribute struct {
@@ -138,99 +161,127 @@ func Uint64Bytes(u uint64) []byte {
 	return d
 }
 
-// unmarshalAttributes returns an array of netfilter.Attributes decoded from
-// a byte array. This byte array should be taken from the netlink.Message's
-// Data payload after the nfHeaderLen offset.
-func unmarshalAttributes(b []byte) ([]Attribute, error) {
+// decode fills the Attribute's Children field with Attributes
+// obtained by exhausting ad.
+func (a *Attribute) decode(ad *netlink.AttributeDecoder) error {
 
-	// Obtain a list of parsed netlink attributes possibly holding
-	// nested Netfilter attributes in their binary Data field.
-	attrs, err := netlink.UnmarshalAttributes(b)
-	if err != nil {
-		return nil, errors.Wrap(err, errWrapNetlinkUnmarshalAttrs)
-	}
-
-	var ra []Attribute
-
-	// Only allocate backing array when there are netlink attributes to decode.
-	if len(attrs) != 0 {
-		ra = make([]Attribute, 0, len(attrs))
-	}
-
-	// Wrap all netlink.Attributes into netfilter.Attributes to support nesting
-	for _, nla := range attrs {
+	for ad.Next() {
 
 		// Copy the netlink attribute's fields into the netfilter attribute.
 		nfa := Attribute{
-			// Only consider the rightmost 14 bits for Type
-			Type: nla.Type & ^(uint16(unix.NLA_F_NESTED) | uint16(unix.NLA_F_NET_BYTEORDER)),
-			Data: nla.Data,
+			// Only consider the rightmost 14 bits for Type.
+			// ad.Type implicitly masks the Nested and NetByteOrder bits.
+			Type: ad.Type(),
+			Data: ad.Bytes(),
 		}
 
-		// Boolean flags extracted from the two leftmost bits of Type
-		nfa.Nested = (nla.Type & uint16(unix.NLA_F_NESTED)) != 0
-		nfa.NetByteOrder = (nla.Type & uint16(unix.NLA_F_NET_BYTEORDER)) != 0
+		// Boolean flags extracted from the two leftmost bits of Type.
+		nfa.Nested = ad.TypeFlags()&netlink.Nested != 0
+		nfa.NetByteOrder = ad.TypeFlags()&netlink.NetByteOrder != 0
 
 		if nfa.NetByteOrder && nfa.Nested {
-			return nil, errInvalidAttributeFlags
+			return errInvalidAttributeFlags
 		}
 
-		// Unmarshal recursively if the netlink Nested flag is set
+		// Unmarshal recursively if the netlink Nested flag is set.
 		if nfa.Nested {
-			if nfa.Children, err = unmarshalAttributes(nla.Data); err != nil {
-				return nil, err
-			}
+			ad.Nested(nfa.decode)
 		}
 
-		ra = append(ra, nfa)
+		a.Children = append(a.Children, nfa)
 	}
 
-	return ra, nil
+	return ad.Err()
 }
 
-// marshalAttributes marshals a nested attribute structure into a byte slice.
-// This byte slice can then be copied into a netlink.Message's Data field after
-// the nfHeaderLen offset.
-func marshalAttributes(attrs []Attribute) ([]byte, error) {
+// encode returns a function that takes an AttributeEncoder and returns error.
+// This function can be passed to AttributeEncoder.Nested for recursively
+// encoding Attributes.
+func (a *Attribute) encode(attrs []Attribute) func(*netlink.AttributeEncoder) error {
 
-	// netlink.Attribute to use as scratch buffer, requires a single allocation
-	nla := netlink.Attribute{}
+	return func(ae *netlink.AttributeEncoder) error {
 
-	// Output array, initialized to the length of the input array
-	ra := make([]netlink.Attribute, 0, len(attrs))
+		for _, nfa := range attrs {
 
-	for _, nfa := range attrs {
-
-		if nfa.NetByteOrder && nfa.Nested {
-			return nil, errInvalidAttributeFlags
-		}
-
-		// Save nested or byte order flags back to the netlink.Attribute's
-		// Type field to include it in the marshaling operation
-		nla.Type = nfa.Type
-
-		switch {
-		case nfa.Nested:
-			nla.Type = nla.Type | unix.NLA_F_NESTED
-		case nfa.NetByteOrder:
-			nla.Type = nla.Type | unix.NLA_F_NET_BYTEORDER
-		}
-
-		// Recursively marshal the attribute's children
-		if nfa.Nested {
-			nfnab, err := marshalAttributes(nfa.Children)
-			if err != nil {
-				return nil, err
+			if nfa.NetByteOrder && nfa.Nested {
+				return errInvalidAttributeFlags
 			}
 
-			nla.Data = nfnab
-		} else {
-			nla.Data = nfa.Data
+			if nfa.Nested {
+				ae.Nested(nfa.Type, nfa.encode(nfa.Children))
+				continue
+			}
+
+			// Manually set the NetByteOrder flag, since ae.Bytes() can't.
+			if nfa.NetByteOrder {
+				nfa.Type |= netlink.NetByteOrder
+			}
+			ae.Bytes(nfa.Type, nfa.Data)
 		}
 
-		ra = append(ra, nla)
+		return nil
+	}
+}
+
+// decodeAttributes returns an array of netfilter.Attributes decoded from
+// a byte array. This byte array should be taken from the netlink.Message's
+// Data payload after the nfHeaderLen offset.
+func decodeAttributes(ad *netlink.AttributeDecoder) ([]Attribute, error) {
+
+	// Use the Children element of the Attribute to decode into.
+	// Attribute already has nested decoding implemented on the type.
+	var a Attribute
+
+	// Pre-allocate backing array when there are netlink attributes to decode.
+	if ad.Len() != 0 {
+		a.Children = make([]Attribute, 0, ad.Len())
 	}
 
-	// Marshal all Netfilter attributes into binary representation of Netlink attributes
-	return netlink.MarshalAttributes(ra)
+	// Catch any errors encountered parsing netfilter structures.
+	if err := a.decode(ad); err != nil {
+		return nil, err
+	}
+
+	return a.Children, nil
+}
+
+// encodeAttributes encodes a list of Attributes into the given netlink.AttributeEncoder.
+func encodeAttributes(ae *netlink.AttributeEncoder, attrs []Attribute) error {
+
+	if ae == nil {
+		return errNilAttributeEncoder
+	}
+
+	attr := Attribute{}
+	return attr.encode(attrs)(ae)
+}
+
+// MarshalAttributes marshals a nested attribute structure into a byte slice.
+// This byte slice can then be copied into a netlink.Message's Data field after
+// the nfHeaderLen offset.
+func MarshalAttributes(attrs []Attribute) ([]byte, error) {
+
+	ae := NewAttributeEncoder()
+
+	if err := encodeAttributes(ae, attrs); err != nil {
+		return nil, err
+	}
+
+	b, err := ae.Encode()
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// UnmarshalAttributes unmarshals a byte slice into a list of Attributes.
+func UnmarshalAttributes(b []byte) ([]Attribute, error) {
+
+	ad, err := NewAttributeDecoder(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeAttributes(ad)
 }
