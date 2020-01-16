@@ -35,6 +35,12 @@ func Dial(config *netlink.Config) (*Conn, error) {
 	return &c, nil
 }
 
+// SetReadBuffer sets the size of the operating system's receive buffer
+// associated with the Conn.
+func (c *Conn) SetReadBuffer(size int) error {
+	return c.conn.SetReadBuffer(size)
+}
+
 // Close closes a Conn.
 func (c *Conn) Close() error {
 	return c.conn.Close()
