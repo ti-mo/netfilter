@@ -1,7 +1,9 @@
 package netfilter
 
 import (
+	"math"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -81,7 +83,7 @@ func TestConnQuery(t *testing.T) {
 
 func TestConnQueryMulticast(t *testing.T) {
 
-	// Dummy Conn initially marked as Multicast
+	// Dummy Conn initially marked as Multicast.
 	connMulticast := Conn{isMulticast: true}
 
 	assert.Equal(t, connMulticast.IsMulticast(), true)
@@ -95,7 +97,7 @@ func TestConnQueryMulticast(t *testing.T) {
 
 func TestConnReceive(t *testing.T) {
 
-	// Inject a message directly into the nltest connection
+	// Inject a message directly into the nltest connection.
 	_, _ = connEcho.conn.Send(nlMsgReqAck)
 
 	// Drain the socket
@@ -103,4 +105,32 @@ func TestConnReceive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error in Receive: %v", err)
 	}
+}
+
+func TestConnDeadline(t *testing.T) {
+
+	c, err := Dial(nil)
+	require.NoError(t, err, "opening Conn")
+
+	require.NoError(t, c.SetDeadline(time.Now().Add(time.Second)), "setting global deadline")
+	require.NoError(t, c.SetReadDeadline(time.Now().Add(time.Second)), "setting read deadline")
+	require.NoError(t, c.SetWriteDeadline(time.Now().Add(time.Second)), "setting write deadline")
+
+	err = c.Close()
+	require.NoError(t, err, "closing Conn")
+}
+
+func TestConnBuffers(t *testing.T) {
+
+	c, err := Dial(nil)
+	require.NoError(t, err, "opening Conn")
+
+	require.NoError(t, c.SetReadBuffer(256), "setting read buffer")
+	require.Error(t, c.SetReadBuffer(math.MaxInt32+1), "setting invalid read buffer")
+
+	require.NoError(t, c.SetWriteBuffer(256), "setting write buffer")
+	require.Error(t, c.SetWriteBuffer(math.MaxInt32+1), "setting invalid write buffer")
+
+	err = c.Close()
+	require.NoError(t, err, "closing Conn")
 }
