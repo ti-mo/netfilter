@@ -21,7 +21,7 @@ func NewAttributeDecoder(b []byte) (*netlink.AttributeDecoder, error) {
 	return ad, nil
 }
 
-// NewAttributeDecoder instantiates a new netlink.AttributeEncoder
+// NewAttributeEncoder instantiates a new netlink.AttributeEncoder
 // configured with a Big Endian byte order.
 func NewAttributeEncoder() *netlink.AttributeEncoder {
 	ae := netlink.NewAttributeEncoder()

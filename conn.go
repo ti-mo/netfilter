@@ -2,6 +2,7 @@ package netfilter
 
 import (
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -121,4 +122,37 @@ func (c *Conn) IsMulticast() bool {
 // SetOption enables or disables a netlink socket option for the Conn.
 func (c *Conn) SetOption(option netlink.ConnOption, enable bool) error {
 	return c.conn.SetOption(option, enable)
+}
+
+// SetDeadline sets the read and write deadlines associated with the connection.
+//
+// Deadline functionality is only supported on Go 1.12+. Calling this function
+// on older versions of Go will result in an error.
+func (c *Conn) SetDeadline(t time.Time) error {
+	return c.conn.SetDeadline(t)
+}
+
+// SetReadDeadline sets the read deadline associated with the connection.
+//
+// Deadline functionality is only supported on Go 1.12+. Calling this function
+// on older versions of Go will result in an error.
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	return c.conn.SetReadDeadline(t)
+}
+
+// SetWriteDeadline sets the write deadline associated with the connection.
+//
+// Deadline functionality is only supported on Go 1.12+. Calling this function on older versions of Go will result in an error.
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	return c.conn.SetWriteDeadline(t)
+}
+
+// SetReadBuffer sets the size of the operating system's receive buffer associated with the Conn.
+func (c *Conn) SetReadBuffer(bytes int) error {
+	return c.conn.SetReadBuffer(bytes)
+}
+
+// SetWriteBuffer sets the size of the operating system's transmit buffer associated with the Conn.
+func (c *Conn) SetWriteBuffer(bytes int) error {
+	return c.conn.SetWriteBuffer(bytes)
 }
