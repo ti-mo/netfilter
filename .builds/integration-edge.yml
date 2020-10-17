@@ -1,0 +1,40 @@
+# Integration test against a rolling/cutting-edge distribution.
+# Uploads coverage reports to coveralls.
+image: archlinux
+packages:
+  - go
+  - curl
+sources:
+  - https://github.com/ti-mo/netfilter
+environment:
+  GOTRACEBACK: "all"
+tasks:
+  - prepare: |
+      go get github.com/mattn/goveralls
+      curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.21.0
+
+      # golangci-lint installs in $HOME/bin.
+      echo 'export PATH="$PATH:$HOME/bin"' >> ~/.buildenv
+
+  - test: |
+      # Display environment.
+      go version
+      uname -a
+
+      # Enter project directory.
+      cd netfilter
+      go get -t -tags=integration -d -v ./...
+
+      make lint
+      make integration
+
+  - coverage: |
+      # Enter project directory.
+      cd netfilter
+
+      # Upload coverage report.
+      set +x
+      /home/build/go/bin/goveralls -coverprofile cover-int.out -service sr.ht-edge -repotoken "$(< ~/.coveralls-token)" || true
+
+secrets:
+- 280ec7bb-b55f-4fce-a079-ea5f3e0e7ad8
