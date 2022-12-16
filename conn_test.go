@@ -1,7 +1,6 @@
 package netfilter
 
 import (
-	"math"
 	"testing"
 	"time"
 
@@ -121,16 +120,11 @@ func TestConnDeadline(t *testing.T) {
 }
 
 func TestConnBuffers(t *testing.T) {
-
 	c, err := Dial(nil)
 	require.NoError(t, err, "opening Conn")
 
 	require.NoError(t, c.SetReadBuffer(256), "setting read buffer")
-	require.Error(t, c.SetReadBuffer(math.MaxInt32+1), "setting invalid read buffer")
-
 	require.NoError(t, c.SetWriteBuffer(256), "setting write buffer")
-	require.Error(t, c.SetWriteBuffer(math.MaxInt32+1), "setting invalid write buffer")
 
-	err = c.Close()
-	require.NoError(t, err, "closing Conn")
+	require.NoError(t, c.Close(), "closing Conn")
 }
