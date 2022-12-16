@@ -14,7 +14,6 @@ import (
 )
 
 func TestMessageUnmarshalNetlink(t *testing.T) {
-
 	tests := []struct {
 		name  string
 		attrs []Attribute
@@ -90,7 +89,6 @@ func TestMessageUnmarshalNetlink(t *testing.T) {
 }
 
 func TestAttributeMarshalNetlink(t *testing.T) {
-
 	tests := []struct {
 		name  string
 		attrs []Attribute
@@ -157,7 +155,6 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 }
 
 func TestEncodeNetlink(t *testing.T) {
-
 	_, err := EncodeNetlink(Header{}, nil)
 	assert.EqualError(t, err, errNilAttributeEncoder.Error())
 
