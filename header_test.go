@@ -10,7 +10,6 @@ import (
 )
 
 func TestHeaderMarshalTwoWay(t *testing.T) {
-
 	refHdr := Header{
 		SubsystemID: SubsystemID(NFSubsysCTNetlinkTimeout),
 		MessageType: MessageType(123),
@@ -56,7 +55,6 @@ func TestHeaderString(t *testing.T) {
 }
 
 func TestProtoFamilyString(t *testing.T) {
-
 	if ProtoFamily(255).String() == "" {
 		t.Fatal("ProtoFamily string representation empty - did you run `go generate`?")
 	}
