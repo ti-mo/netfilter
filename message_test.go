@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -77,13 +76,8 @@ func TestMessageUnmarshalNetlink(t *testing.T) {
 
 			require.NoError(t, err)
 
-			if diff := cmp.Diff(tt.attrs, attrs); diff != "" {
-				t.Fatalf("unexpected attributes (-want, +got):\n%s", diff)
-			}
-
-			if diff := cmp.Diff(tt.h, h); diff != "" {
-				t.Fatalf("unexpected header (-want, +got):\n%s", diff)
-			}
+			assert.Equal(t, tt.attrs, attrs, "unexpected attributes")
+			assert.Equal(t, tt.h, h, "unexpected header")
 		})
 	}
 }
@@ -147,9 +141,7 @@ func TestAttributeMarshalNetlink(t *testing.T) {
 				return
 			}
 
-			if diff := cmp.Diff(tt.msg, msg); diff != "" {
-				t.Fatalf("unexpected message (-want, +got):\n%s", diff)
-			}
+			assert.Equal(t, tt.msg, msg, "unexpected message")
 		})
 	}
 }

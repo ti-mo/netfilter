@@ -3,7 +3,6 @@ package netfilter
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mdlayher/netlink"
@@ -22,19 +21,12 @@ func TestHeaderMarshalTwoWay(t *testing.T) {
 	refMsg := netlink.Message{Header: netlink.Header{Type: 0x087B}, Data: []byte{255, 1, 0, 2}}
 
 	var gotHdr Header
-	gotMsg := netlink.Message{Data: make([]byte, 4)}
-
 	assert.Nil(t, gotHdr.unmarshal(refMsg))
+	assert.Equal(t, refHdr, gotHdr, "unexpected unmarshal")
 
-	if diff := cmp.Diff(refHdr, gotHdr); diff != "" {
-		t.Fatalf("unexpected netfilter Header (-want, +got):\n %s", diff)
-	}
-
+	gotMsg := netlink.Message{Data: make([]byte, 4)}
 	assert.Nil(t, gotHdr.marshal(&gotMsg))
-
-	if diff := cmp.Diff(refMsg, gotMsg); diff != "" {
-		t.Fatalf("unexpected netlink Message (-want, +got):\n %s", diff)
-	}
+	assert.Equal(t, refMsg, gotMsg, "unexpected marshal")
 
 	// unmarshal error
 	assert.Equal(t, errMessageLen, gotHdr.unmarshal(netlink.Message{}))

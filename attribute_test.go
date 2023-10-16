@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -138,15 +137,9 @@ func TestAttributeMarshalAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			b, err := MarshalAttributes(tt.attrs)
-			if err != nil {
-				t.Fatalf("unexpected marshal error: %v", err)
-			}
-
-			if diff := cmp.Diff(tt.b, b); diff != "" {
-				t.Fatalf("unexpected marshal (-want +got):\n%s", diff)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.b, b, "unexpected marshal")
 		})
 	}
 }
@@ -385,16 +378,13 @@ func TestAttributeMarshalTwoWay(t *testing.T) {
 			// Unmarshal binary content into nested structures
 			attrs, err := decodeAttributes(ad)
 			require.NoError(t, err)
-
-			assert.Empty(t, cmp.Diff(tt.attrs, attrs))
-
-			var b []byte
+			assert.Equal(t, tt.attrs, attrs, "unexpected decode")
 
 			// Attempt re-marshal into binary form
+			var b []byte
 			b, err = MarshalAttributes(tt.attrs)
 			require.NoError(t, err)
-
-			assert.Empty(t, cmp.Diff(tt.b, b))
+			assert.Equal(t, tt.b, b, "unexpected marshal")
 		})
 	}
 }
