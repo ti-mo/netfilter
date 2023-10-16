@@ -1,6 +1,6 @@
 module github.com/ti-mo/netfilter
 
-go 1.18
+go 1.20
 
 require (
 	github.com/mdlayher/netlink v1.7.2
