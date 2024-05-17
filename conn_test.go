@@ -30,13 +30,13 @@ var (
 	connEcho = Conn{conn: nlConnEcho}
 
 	// Connection that returns error on any send.
-	nlConnError = nltest.Dial(func(req []netlink.Message) ([]netlink.Message, error) {
+	nlConnError = nltest.Dial(func(_ []netlink.Message) ([]netlink.Message, error) {
 		return nil, errors.New(errNetlinkTest)
 	})
 	connErr = Conn{conn: nlConnError}
 
 	// Connection that returns a single message with a nlMsgErr that trips the netlink payload error check.
-	nlConnMsgError = nltest.Dial(func(req []netlink.Message) ([]netlink.Message, error) {
+	nlConnMsgError = nltest.Dial(func(_ []netlink.Message) ([]netlink.Message, error) {
 		resp := []netlink.Message{
 			{
 				Header: netlink.Header{Type: netlink.Error},
