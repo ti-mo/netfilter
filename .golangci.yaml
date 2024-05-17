@@ -1,12 +1,6 @@
-linters-settings:
-  staticcheck:
-    go: "1.19"
-  unused:
-    go: "1.19"
-
 linters:
   enable:
-    - goerr113
+    - err113
     - gofmt
     - goimports
     - govet
