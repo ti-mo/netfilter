@@ -22,13 +22,17 @@ type Conn struct {
 	mu sync.RWMutex
 }
 
+const (
+	NETLINK_NETFILTER = 12
+)
+
 // Dial opens a new Netlink connection to the Netfilter subsystem
 // and returns it wrapped in a Conn structure.
 func Dial(config *netlink.Config) (*Conn, error) {
 	var c Conn
 	var err error
 
-	c.conn, err = netlink.Dial(unix.NETLINK_NETFILTER, config)
+	c.conn, err = netlink.Dial(NETLINK_NETFILTER, config)
 	if err != nil {
 		return nil, err
 	}
